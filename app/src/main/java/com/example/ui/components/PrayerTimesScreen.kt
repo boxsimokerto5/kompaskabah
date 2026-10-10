@@ -3,6 +3,7 @@ package com.example.ui.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.WbSunny
@@ -93,6 +95,7 @@ fun PrayerTimesScreen(
     onSelectMuezzin: (MuezzinVoiceOption) -> Unit,
     onTogglePrayerAdhan: (String) -> Unit,
     onTestOrStopAdhan: (String) -> Unit,
+    onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -222,6 +225,24 @@ fun PrayerTimesScreen(
                                     } else {
                                         CharcoalText.copy(alpha = 0.38f)
                                     },
+                                    modifier = Modifier.size(19.dp)
+                                )
+                            }
+                        }
+
+                        Surface(
+                            onClick = onOpenSettings,
+                            shape = CircleShape,
+                            color = Color.White.copy(alpha = 0.88f),
+                            modifier = Modifier
+                                .size(38.dp)
+                                .testTag("prayer_settings_icon_button")
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Pengaturan",
+                                    tint = DeepEmeraldPrimary,
                                     modifier = Modifier.size(19.dp)
                                 )
                             }
@@ -751,24 +772,40 @@ private fun HomeScreenWidgetPromoCard(uiState: QiblaUiState) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(18.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                Color(0xFF134838),
-                                Color(0xFF0E382B),
-                                Color(0xFF08241C)
-                            )
-                        )
-                    )
                     .border(
-                        width = 1.dp,
-                        color = Color(0xFFD4AF37).copy(alpha = 0.5f),
+                        width = 1.2.dp,
+                        color = Color(0xFFD4AF37).copy(alpha = 0.65f),
                         shape = RoundedCornerShape(18.dp)
                     )
-                    .padding(14.dp)
                     .testTag("widget_live_preview_box")
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Background: Grand Mosque seen from afar with vibrant blue sky
+                Image(
+                    painter = painterResource(id = R.drawable.img_grand_mosque_blue_sky_1791642671931),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.matchParentSize()
+                )
+
+                // Atmospheric Scrim Gradient for high contrast & elegance
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(
+                            Brush.verticalGradient(
+                                0.0f to Color(0x59071B38),
+                                0.45f to Color(0x33041226),
+                                1.0f to Color(0xD9020A17)
+                            )
+                        )
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -781,15 +818,15 @@ private fun HomeScreenWidgetPromoCard(uiState: QiblaUiState) {
                             Icon(
                                 imageVector = Icons.Default.LocationOn,
                                 contentDescription = null,
-                                tint = Color(0xFFD4AF37),
-                                modifier = Modifier.size(14.dp)
+                                tint = Color(0xFFFFDF73),
+                                modifier = Modifier.size(15.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = uiState.locationLabel,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.9f),
-                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -798,14 +835,15 @@ private fun HomeScreenWidgetPromoCard(uiState: QiblaUiState) {
                         if (uiState.nextPrayerCountdownLabel.isNotEmpty()) {
                             Surface(
                                 shape = RoundedCornerShape(50),
-                                color = Color(0xFF10B981).copy(alpha = 0.25f)
+                                color = Color(0xFF064E3B).copy(alpha = 0.6f),
+                                border = BorderStroke(1.dp, Color(0xFF34D399).copy(alpha = 0.7f))
                             ) {
                                 Text(
                                     text = uiState.nextPrayerCountdownLabel,
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color(0xFF6EE7B7),
                                     fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
                                 )
                             }
                         }
@@ -820,7 +858,7 @@ private fun HomeScreenWidgetPromoCard(uiState: QiblaUiState) {
                             Text(
                                 text = "SHOLAT BERIKUTNYA",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFFD4AF37),
+                                color = Color(0xFFFFE082),
                                 fontWeight = FontWeight.Bold
                             )
                             Row(
@@ -844,11 +882,10 @@ private fun HomeScreenWidgetPromoCard(uiState: QiblaUiState) {
 
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color.White.copy(alpha = 0.14f),
-                            modifier = Modifier.border(
+                            color = Color(0xFF0A1C36).copy(alpha = 0.5f),
+                            border = BorderStroke(
                                 width = 1.dp,
-                                color = Color(0xFFD4AF37).copy(alpha = 0.4f),
-                                shape = RoundedCornerShape(12.dp)
+                                color = Color(0xFFD4AF37).copy(alpha = 0.6f)
                             )
                         ) {
                             Column(
@@ -864,7 +901,7 @@ private fun HomeScreenWidgetPromoCard(uiState: QiblaUiState) {
                                 Text(
                                     text = "${"%,.0f".format(uiState.distanceToKaabaKm)} km ke Ka'bah",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White.copy(alpha = 0.8f)
+                                    color = Color.White.copy(alpha = 0.9f)
                                 )
                             }
                         }

@@ -35,6 +35,7 @@ enum class QiblaNavigationTab {
     COMPASS,
     ARROW_POINTER,
     PRAYER_TIMES,
+    AMALAN,
     NEARBY_MOSQUES,
     SENSOR_DIAGNOSTICS
 }
