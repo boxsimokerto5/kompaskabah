@@ -97,8 +97,8 @@ fun QiblaCompassCanvas(
     val animatedHeading by animateFloatAsState(
         targetValue = continuousHeading,
         animationSpec = spring(
-            dampingRatio = 0.82f,
-            stiffness = Spring.StiffnessMediumLow
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessLow
         ),
         label = "compass_heading_spring"
     )

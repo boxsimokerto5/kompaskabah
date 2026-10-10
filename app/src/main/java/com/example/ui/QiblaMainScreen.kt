@@ -2,6 +2,7 @@ package com.example.ui
 
 import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -9,10 +10,18 @@ import android.os.VibratorManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -24,8 +33,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
@@ -36,30 +45,35 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CompassCalibration
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Mosque
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.NorthEast
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -69,8 +83,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -79,19 +95,26 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.example.R
+import com.example.data.MuezzinVoiceOption
 import com.example.domain.QiblaCalculator
-import com.example.ui.components.CityPickerSheet
+import com.example.service.AdhanPlaybackState
+import com.example.ui.components.NearbyMosquesScreen
 import com.example.ui.components.PrayerTimesScreen
+import com.example.ui.components.QiblaArrowScreen
 import com.example.ui.components.QiblaCompassCanvas
 import com.example.ui.components.SensorDiagnosticsScreen
 import com.example.ui.theme.AlignedEmerald
 import com.example.ui.theme.AlignedEmeraldGlow
 import com.example.ui.theme.CharcoalText
+import com.example.ui.theme.DangerCoral
 import com.example.ui.theme.DeepEmeraldPrimary
 import com.example.ui.theme.DeepGoldAccent
-import com.example.ui.theme.MeccaGold
-import com.example.ui.theme.MeccaGoldBright
+
+private val MenuActiveBlue = Color(0xFF1D8FE1)
+private val MenuInactiveSoftBlue = Color(0xFFE9F3FB)
+private val MenuInactiveIconTint = Color(0xFF6B8A9E)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,15 +123,18 @@ fun QiblaMainScreen(
     onSelectTab: (QiblaNavigationTab) -> Unit,
     onPermissionResult: (Boolean) -> Unit,
     onRefreshGps: () -> Unit,
-    onSelectCity: (com.example.domain.CityPreset) -> Unit,
-    onSaveCustomCoordinates: (Double, Double, String) -> Unit,
     onManualRotate: (Float) -> Unit,
     onSnapToQibla: () -> Unit,
     onResumeSensor: () -> Unit,
     onToggleTrueNorth: (Boolean) -> Unit,
     onToggleHaptic: (Boolean) -> Unit,
     onToggleDarkTheme: (Boolean) -> Unit,
-    onSetShowCityPicker: (Boolean) -> Unit
+    onToggleAdhanAuto: (Boolean) -> Unit,
+    onSelectMuezzin: (MuezzinVoiceOption) -> Unit,
+    onTogglePrayerAdhan: (String) -> Unit,
+    onTestOrStopAdhan: (String) -> Unit,
+    onStopAdhan: () -> Unit,
+    onRefreshMosques: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
@@ -118,25 +144,52 @@ fun QiblaMainScreen(
         }
     }
 
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
+    val permissionsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+        val locGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
                 permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        onPermissionResult(granted)
+        onPermissionResult(locGranted)
     }
 
-    // Automatically request location permission silently on first launch if not yet granted
-    var hasAutoRequestedGps by remember { mutableStateOf(false) }
+    val triggerGpsRefreshOrRequest: () -> Unit = {
+        if (uiState.hasLocationPermission) {
+            onRefreshGps()
+        } else {
+            val perms = buildList {
+                add(Manifest.permission.ACCESS_FINE_LOCATION)
+                add(Manifest.permission.ACCESS_COARSE_LOCATION)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    add(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }.toTypedArray()
+            permissionsLauncher.launch(perms)
+        }
+    }
+
+    // Automatically request location + notification permissions on first launch
+    var hasAutoRequestedPermissions by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        if (!uiState.hasLocationPermission && !hasAutoRequestedGps) {
-            hasAutoRequestedGps = true
-            locationPermissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                )
-            )
+        if (!hasAutoRequestedPermissions) {
+            hasAutoRequestedPermissions = true
+            val needsNotifPerm = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) != PackageManager.PERMISSION_GRANTED
+
+            if (!uiState.hasLocationPermission || needsNotifPerm) {
+                val perms = buildList {
+                    add(Manifest.permission.ACCESS_FINE_LOCATION)
+                    add(Manifest.permission.ACCESS_COARSE_LOCATION)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        add(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                }.toTypedArray()
+                permissionsLauncher.launch(perms)
+            } else {
+                onRefreshGps()
+            }
         }
     }
 
@@ -149,30 +202,6 @@ fun QiblaMainScreen(
         wasAlignedPreviously = uiState.isAlignedWithKaaba
     }
 
-    if (uiState.showCityPickerSheet) {
-        CityPickerSheet(
-            currentLocationLabel = uiState.locationLabel,
-            currentLatitude = uiState.latitude,
-            currentLongitude = uiState.longitude,
-            isLiveGpsActive = uiState.isLiveGpsActive,
-            onRequestLiveGps = {
-                if (uiState.hasLocationPermission) {
-                    onRefreshGps()
-                } else {
-                    locationPermissionLauncher.launch(
-                        arrayOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION
-                        )
-                    )
-                }
-            },
-            onSelectCity = onSelectCity,
-            onSaveCustomCoordinates = onSaveCustomCoordinates,
-            onDismiss = { onSetShowCityPicker(false) }
-        )
-    }
-
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isWideScreen = maxWidth >= 700.dp
 
@@ -181,10 +210,24 @@ fun QiblaMainScreen(
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
                 if (!isWideScreen) {
-                    QiblaBottomNavigationBar(
-                        selectedTab = uiState.selectedTab,
-                        onSelectTab = onSelectTab
-                    )
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        // Floating Active Adhan Foreground Player Bar (visible across all tabs when Adhan is playing)
+                        AnimatedVisibility(
+                            visible = uiState.adhanPlaybackState.isPlaying,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            ActiveAdhanBannerBar(
+                                playbackState = uiState.adhanPlaybackState,
+                                onStopAdhan = onStopAdhan
+                            )
+                        }
+
+                        ElegantQiblaBottomMenuBar(
+                            selectedTab = uiState.selectedTab,
+                            onSelectTab = onSelectTab
+                        )
+                    }
                 }
             }
         ) { innerPadding ->
@@ -205,59 +248,63 @@ fun QiblaMainScreen(
                         .weight(1f)
                         .fillMaxHeight()
                 ) {
+                    if (isWideScreen && uiState.adhanPlaybackState.isPlaying) {
+                        ActiveAdhanBannerBar(
+                            playbackState = uiState.adhanPlaybackState,
+                            onStopAdhan = onStopAdhan
+                        )
+                    }
+
                     when (uiState.selectedTab) {
                         QiblaNavigationTab.COMPASS -> {
                             CompassDashboardContent(
                                 uiState = uiState,
                                 isWideScreen = isWideScreen,
-                                onOpenCityPicker = { onSetShowCityPicker(true) },
-                                onRequestGpsClick = {
-                                    if (uiState.hasLocationPermission) {
-                                        onRefreshGps()
-                                    } else {
-                                        locationPermissionLauncher.launch(
-                                            arrayOf(
-                                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                                Manifest.permission.ACCESS_COARSE_LOCATION
-                                            )
-                                        )
-                                    }
-                                },
+                                onRequestGpsClick = triggerGpsRefreshOrRequest,
                                 onToggleHaptic = { onToggleHaptic(!uiState.hapticFeedbackEnabled) },
                                 onManualRotate = onManualRotate,
                                 onSnapToQibla = onSnapToQibla,
-                                onResumeSensor = onResumeSensor
+                                onResumeSensor = onResumeSensor,
+                                onSwitchToArrowMode = {
+                                    onSelectTab(QiblaNavigationTab.ARROW_POINTER)
+                                }
+                            )
+                        }
+
+                        QiblaNavigationTab.ARROW_POINTER -> {
+                            QiblaArrowScreen(
+                                uiState = uiState,
+                                onBackToCompass = { onSelectTab(QiblaNavigationTab.COMPASS) },
+                                onOpenPrayerTimes = { onSelectTab(QiblaNavigationTab.PRAYER_TIMES) },
+                                onRefreshGps = triggerGpsRefreshOrRequest,
+                                onOpenCalibration = { onSelectTab(QiblaNavigationTab.SENSOR_DIAGNOSTICS) },
+                                onToggleHaptic = { onToggleHaptic(!uiState.hapticFeedbackEnabled) },
+                                onManualRotate = onManualRotate,
+                                onSnapToQibla = onSnapToQibla
                             )
                         }
 
                         QiblaNavigationTab.PRAYER_TIMES -> {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .windowInsetsPadding(WindowInsets.statusBars)
-                            ) {
-                                TopQiblaHeaderBar(
-                                    uiState = uiState,
-                                    onOpenLocationPicker = { onSetShowCityPicker(true) },
-                                    onRequestGpsClick = {
-                                        if (uiState.hasLocationPermission) {
-                                            onRefreshGps()
-                                        } else {
-                                            locationPermissionLauncher.launch(
-                                                arrayOf(
-                                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                                    Manifest.permission.ACCESS_COARSE_LOCATION
-                                                )
-                                            )
-                                        }
-                                    },
-                                    onToggleHaptic = { onToggleHaptic(!uiState.hapticFeedbackEnabled) }
-                                )
-                                PrayerTimesScreen(
-                                    uiState = uiState,
-                                    onOpenCityPicker = { onSetShowCityPicker(true) }
-                                )
-                            }
+                            PrayerTimesScreen(
+                                uiState = uiState,
+                                onRefreshGps = triggerGpsRefreshOrRequest,
+                                onToggleHaptic = { onToggleHaptic(!uiState.hapticFeedbackEnabled) },
+                                onToggleAdhanAuto = onToggleAdhanAuto,
+                                onSelectMuezzin = onSelectMuezzin,
+                                onTogglePrayerAdhan = onTogglePrayerAdhan,
+                                onTestOrStopAdhan = onTestOrStopAdhan
+                            )
+                        }
+
+                        QiblaNavigationTab.NEARBY_MOSQUES -> {
+                            NearbyMosquesScreen(
+                                uiState = uiState,
+                                onRefreshGpsAndMosques = {
+                                    onRefreshMosques()
+                                    triggerGpsRefreshOrRequest()
+                                },
+                                onToggleHaptic = { onToggleHaptic(!uiState.hapticFeedbackEnabled) }
+                            )
                         }
 
                         QiblaNavigationTab.SENSOR_DIAGNOSTICS -> {
@@ -268,19 +315,7 @@ fun QiblaMainScreen(
                             ) {
                                 TopQiblaHeaderBar(
                                     uiState = uiState,
-                                    onOpenLocationPicker = { onSetShowCityPicker(true) },
-                                    onRequestGpsClick = {
-                                        if (uiState.hasLocationPermission) {
-                                            onRefreshGps()
-                                        } else {
-                                            locationPermissionLauncher.launch(
-                                                arrayOf(
-                                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                                    Manifest.permission.ACCESS_COARSE_LOCATION
-                                                )
-                                            )
-                                        }
-                                    },
+                                    onRequestGpsClick = triggerGpsRefreshOrRequest,
                                     onToggleHaptic = { onToggleHaptic(!uiState.hapticFeedbackEnabled) }
                                 )
                                 SensorDiagnosticsScreen(
@@ -298,10 +333,104 @@ fun QiblaMainScreen(
     }
 }
 
+/**
+ * Prominent Foreground Adhan Player bar that appears whenever Adhan is actively playing
+ * so the user can see which prayer & Muezzin is sounding and stop it with one tap.
+ */
+@Composable
+private fun ActiveAdhanBannerBar(
+    playbackState: AdhanPlaybackState,
+    onStopAdhan: () -> Unit
+) {
+    Surface(
+        color = DeepEmeraldPrimary,
+        contentColor = Color.White,
+        shadowElevation = 8.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("active_adhan_foreground_banner")
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .background(
+                            color = Color.White.copy(alpha = 0.16f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                        contentDescription = null,
+                        tint = Color(0xFFFFE082),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = if (playbackState.isPreview) {
+                            "Kumandang Adzan (${playbackState.prayerName})"
+                        } else {
+                            "Waktunya Sholat ${playbackState.prayerName}"
+                        },
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = playbackState.muezzinTitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.85f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Button(
+                onClick = onStopAdhan,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = DangerCoral,
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(50),
+                modifier = Modifier.testTag("banner_stop_adhan_button")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Stop,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Berhenti",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun TopQiblaHeaderBar(
     uiState: QiblaUiState,
-    onOpenLocationPicker: () -> Unit,
     onRequestGpsClick: () -> Unit,
     onToggleHaptic: () -> Unit
 ) {
@@ -324,13 +453,13 @@ private fun TopQiblaHeaderBar(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
-                    .clickable { onOpenLocationPicker() }
+                    .clickable { onRequestGpsClick() }
                     .padding(vertical = 2.dp)
                     .testTag("header_location_button")
             ) {
                 Icon(
                     imageVector = Icons.Default.LocationOn,
-                    contentDescription = stringResource(id = R.string.cd_location_button),
+                    contentDescription = "Lokasi GPS Otomatis",
                     tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(16.dp)
                 )
@@ -382,21 +511,19 @@ private fun TopQiblaHeaderBar(
 private fun CompassDashboardContent(
     uiState: QiblaUiState,
     isWideScreen: Boolean,
-    onOpenCityPicker: () -> Unit,
     onRequestGpsClick: () -> Unit,
     onToggleHaptic: () -> Unit,
     onManualRotate: (Float) -> Unit,
     onSnapToQibla: () -> Unit,
-    onResumeSensor: () -> Unit
+    onResumeSensor: () -> Unit,
+    onSwitchToArrowMode: () -> Unit
 ) {
     val scrollState = rememberScrollState()
 
     if (isWideScreen) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Full-bleed edge-to-edge Kaaba Daylight Hero Banner across the top
             FullWidthKaabaDaylightHero(
                 uiState = uiState,
-                onOpenCityPicker = onOpenCityPicker,
                 onRequestGpsClick = onRequestGpsClick,
                 onToggleHaptic = onToggleHaptic
             )
@@ -437,34 +564,31 @@ private fun CompassDashboardContent(
                     QuickSimulationActionsRow(
                         uiState = uiState,
                         onSnapToQibla = onSnapToQibla,
-                        onResumeSensor = onResumeSensor
+                        onResumeSensor = onResumeSensor,
+                        onSwitchToArrowMode = onSwitchToArrowMode
                     )
                 }
             }
         }
     } else {
-        // Mobile Portrait Layout: Full Left-to-Right Edge-to-Edge Daylight Kaaba Hero blending seamlessly into the bright page
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 1. Full-Bleed Left-to-Right Bright Blue-Sky Kaaba Hero with Seamless Bottom Gradient
             FullWidthKaabaDaylightHero(
                 uiState = uiState,
-                onOpenCityPicker = onOpenCityPicker,
                 onRequestGpsClick = onRequestGpsClick,
                 onToggleHaptic = onToggleHaptic
             )
 
-            // 2. Centerpiece Luminous Kaaba Compass Dial
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 QiblaCompassCanvas(
                     deviceHeadingDeg = uiState.effectiveDeviceHeadingDeg,
@@ -475,38 +599,31 @@ private fun CompassDashboardContent(
                     isNearAlignment = uiState.isNearAlignmentWithKaaba,
                     isDarkTheme = uiState.darkThemeEnabled,
                     onManualRotate = onManualRotate,
-                    modifier = Modifier.widthIn(max = 365.dp)
+                    modifier = Modifier.widthIn(max = 355.dp)
                 )
 
-                // 3. Clean Geodesic Summary Strip
                 CleanTelemetryStrip(
                     uiState = uiState,
                     modifier = Modifier.widthIn(max = 560.dp)
                 )
 
-                // 4. Minimalist Quick Alignment Chip Row
                 QuickSimulationActionsRow(
                     uiState = uiState,
                     onSnapToQibla = onSnapToQibla,
                     onResumeSensor = onResumeSensor,
+                    onSwitchToArrowMode = onSwitchToArrowMode,
                     modifier = Modifier.widthIn(max = 560.dp)
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
 }
 
-/**
- * Full-width (edge-to-edge left-to-right) bright blue-sky Kaaba hero header
- * that smoothly gradients at the bottom into `MaterialTheme.colorScheme.background`
- * for an airy, luminous, seamless look.
- */
 @Composable
 private fun FullWidthKaabaDaylightHero(
     uiState: QiblaUiState,
-    onOpenCityPicker: () -> Unit,
     onRequestGpsClick: () -> Unit,
     onToggleHaptic: () -> Unit
 ) {
@@ -515,10 +632,9 @@ private fun FullWidthKaabaDaylightHero(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(255.dp)
+            .height(250.dp)
             .testTag("kaaba_atmosphere_banner")
     ) {
-        // Full-bleed Left-to-Right Bright Blue Sky Kaaba Illustration
         Image(
             painter = painterResource(id = R.drawable.img_kaaba_daylight_1791628182842),
             contentDescription = stringResource(id = R.string.cd_kaaba_hero),
@@ -527,7 +643,6 @@ private fun FullWidthKaabaDaylightHero(
             modifier = Modifier.fillMaxSize()
         )
 
-        // Subtle top sky scrim so top header text/icons remain crisp against the bright blue sky
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -543,7 +658,6 @@ private fun FullWidthKaabaDaylightHero(
                 )
         )
 
-        // Smooth bottom gradient fade blending the Kaaba courtyard directly into the page background
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -560,7 +674,6 @@ private fun FullWidthKaabaDaylightHero(
                 )
         )
 
-        // Foreground Content inside the Hero Header
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -568,7 +681,6 @@ private fun FullWidthKaabaDaylightHero(
                 .padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Top Bar overlaid on the bright blue sky
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -579,13 +691,13 @@ private fun FullWidthKaabaDaylightHero(
                     modifier = Modifier
                         .clip(RoundedCornerShape(50))
                         .background(Color.White.copy(alpha = 0.88f))
-                        .clickable { onOpenCityPicker() }
+                        .clickable { onRequestGpsClick() }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                         .testTag("header_location_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.LocationOn,
-                        contentDescription = stringResource(id = R.string.cd_location_button),
+                        contentDescription = "Lokasi GPS Otomatis",
                         tint = DeepEmeraldPrimary,
                         modifier = Modifier.size(16.dp)
                     )
@@ -646,7 +758,6 @@ private fun FullWidthKaabaDaylightHero(
                 }
             }
 
-            // Bottom Info Row floating on the soft gradient transition
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -828,6 +939,7 @@ private fun QuickSimulationActionsRow(
     uiState: QiblaUiState,
     onSnapToQibla: () -> Unit,
     onResumeSensor: () -> Unit,
+    onSwitchToArrowMode: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -836,14 +948,45 @@ private fun QuickSimulationActionsRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         FilterChip(
+            selected = false,
+            onClick = onSwitchToArrowMode,
+            label = {
+                Text(
+                    text = "Mode Anak Panah",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MenuActiveBlue
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.NorthEast,
+                    contentDescription = null,
+                    tint = MenuActiveBlue,
+                    modifier = Modifier.size(16.dp)
+                )
+            },
+            colors = FilterChipDefaults.filterChipColors(
+                containerColor = MenuInactiveSoftBlue
+            ),
+            border = FilterChipDefaults.filterChipBorder(
+                enabled = true,
+                selected = false,
+                borderColor = MenuActiveBlue.copy(alpha = 0.35f)
+            ),
+            modifier = Modifier.testTag("switch_to_arrow_mode_chip")
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        FilterChip(
             selected = uiState.isAlignedWithKaaba,
             onClick = onSnapToQibla,
             label = {
                 Text(
                     text = if (uiState.isAlignedWithKaaba) {
-                        "Menghadap Ka'bah (${"%.1f°".format(uiState.qiblaBearingTrueNorthDeg)})"
+                        "Tepat Kiblat"
                     } else {
-                        "Simulasi Tepat Kiblat"
+                        "Simulasi Kiblat"
                     },
                     style = MaterialTheme.typography.labelMedium
                 )
@@ -864,11 +1007,11 @@ private fun QuickSimulationActionsRow(
         )
 
         if (uiState.isManualRotationOverride && uiState.isHardwareSensorAvailable) {
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             FilterChip(
                 selected = false,
                 onClick = onResumeSensor,
-                label = { Text("Sensor Otomatis", style = MaterialTheme.typography.labelMedium) },
+                label = { Text("Reset", style = MaterialTheme.typography.labelMedium) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Refresh,
@@ -883,50 +1026,143 @@ private fun QuickSimulationActionsRow(
 }
 
 @Composable
-private fun QiblaBottomNavigationBar(
+private fun ElegantQiblaBottomMenuBar(
     selectedTab: QiblaNavigationTab,
     onSelectTab: (QiblaNavigationTab) -> Unit
 ) {
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = 2.dp
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 4.dp,
+        shadowElevation = 8.dp,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        NavigationBarItem(
-            selected = selectedTab == QiblaNavigationTab.COMPASS,
-            onClick = { onSelectTab(QiblaNavigationTab.COMPASS) },
-            icon = { Icon(Icons.Default.Explore, contentDescription = null) },
-            label = { Text(stringResource(id = R.string.tab_compass)) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                indicatorColor = MaterialTheme.colorScheme.primary
-            ),
-            modifier = Modifier.testTag("nav_tab_compass")
-        )
-        NavigationBarItem(
-            selected = selectedTab == QiblaNavigationTab.PRAYER_TIMES,
-            onClick = { onSelectTab(QiblaNavigationTab.PRAYER_TIMES) },
-            icon = { Icon(Icons.Default.AccessTime, contentDescription = null) },
-            label = { Text(stringResource(id = R.string.tab_prayer)) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                indicatorColor = MaterialTheme.colorScheme.primary
-            ),
-            modifier = Modifier.testTag("nav_tab_prayer")
-        )
-        NavigationBarItem(
-            selected = selectedTab == QiblaNavigationTab.SENSOR_DIAGNOSTICS,
-            onClick = { onSelectTab(QiblaNavigationTab.SENSOR_DIAGNOSTICS) },
-            icon = { Icon(Icons.Default.CompassCalibration, contentDescription = null) },
-            label = { Text(stringResource(id = R.string.tab_sensor)) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                indicatorColor = MaterialTheme.colorScheme.primary
-            ),
-            modifier = Modifier.testTag("nav_tab_sensor")
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.navigationBars)
+        ) {
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f),
+                thickness = 0.8.dp
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularNavMenuItem(
+                    label = stringResource(id = R.string.tab_compass),
+                    icon = Icons.Default.Explore,
+                    isSelected = selectedTab == QiblaNavigationTab.COMPASS,
+                    onClick = { onSelectTab(QiblaNavigationTab.COMPASS) },
+                    testTag = "nav_tab_compass"
+                )
+
+                CircularNavMenuItem(
+                    label = stringResource(id = R.string.tab_arrow),
+                    icon = Icons.Default.NorthEast,
+                    isSelected = selectedTab == QiblaNavigationTab.ARROW_POINTER,
+                    onClick = { onSelectTab(QiblaNavigationTab.ARROW_POINTER) },
+                    testTag = "nav_tab_arrow"
+                )
+
+                CircularNavMenuItem(
+                    label = stringResource(id = R.string.tab_prayer),
+                    icon = Icons.Default.AccessTime,
+                    isSelected = selectedTab == QiblaNavigationTab.PRAYER_TIMES,
+                    onClick = { onSelectTab(QiblaNavigationTab.PRAYER_TIMES) },
+                    testTag = "nav_tab_prayer"
+                )
+
+                CircularNavMenuItem(
+                    label = stringResource(id = R.string.tab_mosques),
+                    icon = Icons.Default.Mosque,
+                    isSelected = selectedTab == QiblaNavigationTab.NEARBY_MOSQUES,
+                    onClick = { onSelectTab(QiblaNavigationTab.NEARBY_MOSQUES) },
+                    testTag = "nav_tab_mosques"
+                )
+
+                CircularNavMenuItem(
+                    label = stringResource(id = R.string.tab_sensor),
+                    icon = Icons.Default.CompassCalibration,
+                    isSelected = selectedTab == QiblaNavigationTab.SENSOR_DIAGNOSTICS,
+                    onClick = { onSelectTab(QiblaNavigationTab.SENSOR_DIAGNOSTICS) },
+                    testTag = "nav_tab_sensor"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CircularNavMenuItem(
+    label: String,
+    icon: ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    testTag: String
+) {
+    val circleBgColor by animateColorAsState(
+        targetValue = if (isSelected) MenuActiveBlue else MenuInactiveSoftBlue,
+        animationSpec = tween(250),
+        label = "nav_circle_bg"
+    )
+
+    val iconTint by animateColorAsState(
+        targetValue = if (isSelected) Color.White else MenuInactiveIconTint,
+        animationSpec = tween(250),
+        label = "nav_icon_tint"
+    )
+
+    val labelColor by animateColorAsState(
+        targetValue = if (isSelected) MenuActiveBlue else MenuInactiveIconTint,
+        animationSpec = tween(250),
+        label = "nav_label_color"
+    )
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(bounded = true),
+                onClick = onClick
+            )
+            .padding(horizontal = 6.dp, vertical = 4.dp)
+            .testTag(testTag)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .then(
+                    if (isSelected) {
+                        Modifier.shadow(elevation = 4.dp, shape = CircleShape)
+                    } else {
+                        Modifier
+                    }
+                )
+                .background(color = circleBgColor, shape = CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = iconTint,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            color = labelColor,
+            maxLines = 1
         )
     }
 }
@@ -950,11 +1186,27 @@ private fun QiblaSideNavigationRail(
         )
         Spacer(modifier = Modifier.height(12.dp))
         NavigationRailItem(
+            selected = selectedTab == QiblaNavigationTab.ARROW_POINTER,
+            onClick = { onSelectTab(QiblaNavigationTab.ARROW_POINTER) },
+            icon = { Icon(Icons.Default.NorthEast, contentDescription = null) },
+            label = { Text(stringResource(id = R.string.tab_arrow)) },
+            modifier = Modifier.testTag("rail_tab_arrow")
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        NavigationRailItem(
             selected = selectedTab == QiblaNavigationTab.PRAYER_TIMES,
             onClick = { onSelectTab(QiblaNavigationTab.PRAYER_TIMES) },
             icon = { Icon(Icons.Default.AccessTime, contentDescription = null) },
             label = { Text(stringResource(id = R.string.tab_prayer)) },
             modifier = Modifier.testTag("rail_tab_prayer")
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        NavigationRailItem(
+            selected = selectedTab == QiblaNavigationTab.NEARBY_MOSQUES,
+            onClick = { onSelectTab(QiblaNavigationTab.NEARBY_MOSQUES) },
+            icon = { Icon(Icons.Default.Mosque, contentDescription = null) },
+            label = { Text(stringResource(id = R.string.tab_mosques)) },
+            modifier = Modifier.testTag("rail_tab_mosques")
         )
         Spacer(modifier = Modifier.height(12.dp))
         NavigationRailItem(

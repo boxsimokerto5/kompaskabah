@@ -6,12 +6,20 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.CompassSensorManager
 import com.example.data.CompassSensorReading
 import com.example.data.LocationTracker
+import com.example.data.MuezzinVoiceOption
+import com.example.data.NearbyMosqueItem
+import com.example.data.NearbyMosquesRepository
 import com.example.data.QiblaPreferencesRepository
 import com.example.data.SensorAccuracyLevel
-import com.example.domain.CityPreset
+import com.example.data.StoredQiblaPreferences
 import com.example.domain.PrayerTimeItem
-import com.example.domain.PresetCitiesRepository
 import com.example.domain.QiblaCalculator
+import com.example.service.AdhanAlarmScheduler
+import com.example.service.AdhanForegroundService
+import com.example.service.AdhanNotificationHelper
+import com.example.service.AdhanPlaybackState
+import com.example.service.ScheduledPrayerAlarmSummary
+import com.example.widget.QiblaPrayerWidgetProvider
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,17 +33,19 @@ import kotlin.math.abs
 
 enum class QiblaNavigationTab {
     COMPASS,
+    ARROW_POINTER,
     PRAYER_TIMES,
+    NEARBY_MOSQUES,
     SENSOR_DIAGNOSTICS
 }
 
 data class QiblaUiState(
     val selectedTab: QiblaNavigationTab = QiblaNavigationTab.COMPASS,
-    val latitude: Double = PresetCitiesRepository.defaultCity.latitude,
-    val longitude: Double = PresetCitiesRepository.defaultCity.longitude,
+    val latitude: Double = -6.1702,
+    val longitude: Double = 106.8314,
     val altitudeMeters: Double = 0.0,
-    val locationLabel: String = PresetCitiesRepository.defaultCity.name,
-    val timezoneOffsetHours: Double = PresetCitiesRepository.defaultCity.timezoneOffsetHours,
+    val locationLabel: String = "Mendeteksi Lokasi GPS…",
+    val timezoneOffsetHours: Double = (TimeZone.getDefault().rawOffset / 3600000.0),
     val isLiveGpsActive: Boolean = false,
     val isFetchingGps: Boolean = false,
     val hasLocationPermission: Boolean = false,
@@ -64,32 +74,31 @@ data class QiblaUiState(
     val hapticFeedbackEnabled: Boolean = true,
     val darkThemeEnabled: Boolean = false,
 
-    // Modals & Sheets
-    val showCityPickerSheet: Boolean = false,
-    val showCalibrationSheet: Boolean = false,
+    // Adhan & Prayer Schedule Settings
+    val adhanAutoEnabled: Boolean = true,
+    val selectedMuezzin: MuezzinVoiceOption = MuezzinVoiceOption.MAKKAH,
+    val enabledAdhanPrayers: Set<String> = StoredQiblaPreferences.DEFAULT_ADHAN_PRAYERS,
+    val adhanPlaybackState: AdhanPlaybackState = AdhanPlaybackState(),
+    val hasNotificationPermission: Boolean = true,
+    val scheduledAlarms: List<ScheduledPrayerAlarmSummary> = emptyList(),
 
     // Prayer Times
     val prayerTimes: List<PrayerTimeItem> = emptyList(),
     val nextPrayerName: String = "Maghrib",
     val nextPrayerTimeFormatted: String = "17:54",
-    val nextPrayerCountdownLabel: String = ""
+    val nextPrayerCountdownLabel: String = "",
+
+    // Nearby Mosques (Automatic GPS Search)
+    val nearbyMosques: List<NearbyMosqueItem> = emptyList(),
+    val isLoadingMosques: Boolean = false,
+    val mosquesErrorMessage: String? = null
 ) {
-    /**
-     * Shortest signed angle delta in [-180, +180] from current phone heading to Qibla.
-     * Positive -> turn right (clockwise), Negative -> turn left (counter-clockwise).
-     */
     val angleDeltaToQiblaDeg: Float
         get() = QiblaCalculator.shortestAngleDelta(effectiveDeviceHeadingDeg, qiblaBearingTrueNorthDeg)
 
-    /**
-     * Whether the phone is currently aligned with the Holy Kaaba within ±3.0 degrees.
-     */
     val isAlignedWithKaaba: Boolean
         get() = abs(angleDeltaToQiblaDeg) <= 3.0f
 
-    /**
-     * Whether the phone is close to alignment (±12 degrees) for visual glow ramping.
-     */
     val isNearAlignmentWithKaaba: Boolean
         get() = abs(angleDeltaToQiblaDeg) <= 12.0f
 
@@ -102,20 +111,27 @@ data class QiblaUiState(
 
 class QiblaViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val appContext = application.applicationContext
     private val compassSensorManager = CompassSensorManager(application)
     private val locationTracker = LocationTracker(application)
     private val preferencesRepository = QiblaPreferencesRepository(application)
+    private val nearbyMosquesRepository = NearbyMosquesRepository()
 
     private val _uiState = MutableStateFlow(QiblaUiState())
     val uiState: StateFlow<QiblaUiState> = _uiState.asStateFlow()
 
     private var gpsStreamJob: Job? = null
+    private var lastMosqueFetchLat: Double = Double.NaN
+    private var lastMosqueFetchLon: Double = Double.NaN
 
     init {
+        AdhanNotificationHelper.ensureNotificationChannel(appContext)
         val initialPerm = locationTracker.hasLocationPermission()
+        val notifPerm = AdhanNotificationHelper.hasNotificationPermission(appContext)
         _uiState.update {
             it.copy(
                 hasLocationPermission = initialPerm,
+                hasNotificationPermission = notifPerm,
                 isHardwareSensorAvailable = compassSensorManager.hasHardwareCompass
             )
         }
@@ -128,9 +144,19 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
 
         observePreferences()
         observeSensorStream()
+        observeAdhanPlaybackState()
+        refreshNearbyMosques(force = true)
 
         if (initialPerm) {
             refreshLiveGpsLocation()
+        }
+    }
+
+    private fun observeAdhanPlaybackState() {
+        viewModelScope.launch {
+            AdhanForegroundService.playbackState.collectLatest { playback ->
+                _uiState.update { it.copy(adhanPlaybackState = playback) }
+            }
         }
     }
 
@@ -146,24 +172,55 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
                         manualAngle = current.manualHeadingOffsetDeg,
                         hasHardware = current.isHardwareSensorAvailable
                     )
+                    val latToUse = if (current.isLiveGpsActive) current.latitude else prefs.latitude
+                    val lonToUse = if (current.isLiveGpsActive) current.longitude else prefs.longitude
+                    val labelToUse = if (current.isLiveGpsActive) {
+                        current.locationLabel
+                    } else if (prefs.isUsingLiveGps && prefs.locationLabel.isNotBlank()) {
+                        prefs.locationLabel
+                    } else {
+                        "Menunggu Sinyal GPS…"
+                    }
+
                     current.copy(
-                        latitude = prefs.latitude,
-                        longitude = prefs.longitude,
-                        locationLabel = prefs.locationLabel,
+                        latitude = latToUse,
+                        longitude = lonToUse,
+                        locationLabel = labelToUse,
                         timezoneOffsetHours = prefs.timezoneOffsetHours,
-                        isLiveGpsActive = prefs.isUsingLiveGps && current.hasLocationPermission,
                         useTrueNorthCorrection = prefs.useTrueNorthCorrection,
                         hapticFeedbackEnabled = prefs.hapticFeedbackEnabled,
                         darkThemeEnabled = prefs.darkThemeEnabled,
+                        adhanAutoEnabled = prefs.adhanAutoEnabled,
+                        selectedMuezzin = prefs.selectedMuezzin,
+                        enabledAdhanPrayers = prefs.enabledAdhanPrayers,
                         effectiveDeviceHeadingDeg = effectiveHeading
                     )
                 }
+
+                val latest = _uiState.value
                 recomputeGeodesicAndPrayers(
-                    lat = prefs.latitude,
-                    lon = prefs.longitude,
-                    alt = _uiState.value.altitudeMeters,
-                    tzOffset = prefs.timezoneOffsetHours
+                    lat = latest.latitude,
+                    lon = latest.longitude,
+                    alt = latest.altitudeMeters,
+                    tzOffset = latest.timezoneOffsetHours
                 )
+                val scheduled = AdhanAlarmScheduler.scheduleDailyAdhanAlarms(
+                    context = appContext,
+                    latitude = latest.latitude,
+                    longitude = latest.longitude,
+                    timezoneOffsetHours = latest.timezoneOffsetHours,
+                    adhanAutoEnabled = prefs.adhanAutoEnabled,
+                    enabledPrayers = prefs.enabledAdhanPrayers,
+                    muezzin = prefs.selectedMuezzin,
+                    locationLabel = latest.locationLabel
+                )
+                _uiState.update {
+                    it.copy(
+                        scheduledAlarms = scheduled,
+                        hasNotificationPermission = AdhanNotificationHelper.hasNotificationPermission(appContext)
+                    )
+                }
+                QiblaPrayerWidgetProvider.updateAllWidgets(appContext)
             }
         }
     }
@@ -272,14 +329,21 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onPermissionResult(granted: Boolean) {
-        _uiState.update { it.copy(hasLocationPermission = granted) }
+        val notifPerm = AdhanNotificationHelper.hasNotificationPermission(appContext)
+        _uiState.update {
+            it.copy(
+                hasLocationPermission = granted,
+                hasNotificationPermission = notifPerm
+            )
+        }
         if (granted) {
             refreshLiveGpsLocation()
         } else {
             _uiState.update {
                 it.copy(
                     isFetchingGps = false,
-                    gpsStatusMessage = "Izin GPS ditolak • Menggunakan lokasi kota pilihan"
+                    locationLabel = "Izin Lokasi GPS Diperlukan",
+                    gpsStatusMessage = "Ketuk tombol GPS untuk mengizinkan akses lokasi otomatis"
                 )
             }
         }
@@ -301,7 +365,8 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
             val coords = locationTracker.fetchCurrentLocationOnce()
             if (coords != null) {
                 val tzHours = TimeZone.getDefault().rawOffset / 3600000.0
-                val label = coords.addressLabel ?: "Koordinat GPS Real-Time"
+                val formattedCoordsFallback = "GPS (%.4f°, %.4f°)".format(coords.latitude, coords.longitude)
+                val label = coords.addressLabel ?: formattedCoordsFallback
                 preferencesRepository.saveLocation(
                     latitude = coords.latitude,
                     longitude = coords.longitude,
@@ -319,7 +384,7 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
                         isLiveGpsActive = true,
                         isFetchingGps = false,
                         gpsAccuracyMeters = coords.accuracyMeters,
-                        gpsStatusMessage = "GPS Terkunci (±${coords.accuracyMeters.toInt()}m)"
+                        gpsStatusMessage = "GPS Real-Time Aktif (±${coords.accuracyMeters.toInt()}m)"
                     )
                 }
                 recomputeGeodesicAndPrayers(
@@ -328,16 +393,27 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
                     alt = coords.altitudeMeters,
                     tzOffset = tzHours
                 )
+                val scheduled = AdhanAlarmScheduler.scheduleDailyAdhanAlarms(
+                    context = appContext,
+                    latitude = coords.latitude,
+                    longitude = coords.longitude,
+                    timezoneOffsetHours = tzHours,
+                    adhanAutoEnabled = _uiState.value.adhanAutoEnabled,
+                    enabledPrayers = _uiState.value.enabledAdhanPrayers,
+                    muezzin = _uiState.value.selectedMuezzin,
+                    locationLabel = label
+                )
+                _uiState.update { it.copy(scheduledAlarms = scheduled) }
+                refreshNearbyMosques(force = true)
             } else {
                 _uiState.update {
                     it.copy(
                         isFetchingGps = false,
-                        gpsStatusMessage = "Sinyal GPS belum tersedia • Menggunakan koordinat tersimpan"
+                        gpsStatusMessage = "Mencari sinyal satelit GPS…"
                     )
                 }
             }
 
-            // Start continuous GPS updates
             startContinuousGpsStream()
         }
     }
@@ -346,99 +422,93 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
         gpsStreamJob?.cancel()
         gpsStreamJob = viewModelScope.launch {
             locationTracker.observeLocationUpdates().collectLatest { coords ->
-                // Only apply automatic GPS updates if the user hasn't explicitly locked a manual preset city
-                if (_uiState.value.isLiveGpsActive) {
-                    val tzHours = TimeZone.getDefault().rawOffset / 3600000.0
-                    val resolvedName = locationTracker.resolveCityName(coords.latitude, coords.longitude)
-                        ?: _uiState.value.locationLabel
-                    _uiState.update {
-                        it.copy(
-                            latitude = coords.latitude,
-                            longitude = coords.longitude,
-                            altitudeMeters = coords.altitudeMeters,
-                            locationLabel = resolvedName,
-                            gpsAccuracyMeters = coords.accuracyMeters,
-                            gpsStatusMessage = "GPS Real-Time Aktif (±${coords.accuracyMeters.toInt()}m)"
-                        )
-                    }
-                    recomputeGeodesicAndPrayers(
-                        lat = coords.latitude,
-                        lon = coords.longitude,
-                        alt = coords.altitudeMeters,
-                        tzOffset = tzHours
+                val tzHours = TimeZone.getDefault().rawOffset / 3600000.0
+                val formattedCoordsFallback = "GPS (%.4f°, %.4f°)".format(coords.latitude, coords.longitude)
+                val resolvedName = locationTracker.resolveCityName(coords.latitude, coords.longitude)
+                    ?: _uiState.value.locationLabel.takeIf { !it.startsWith("Men") }
+                    ?: formattedCoordsFallback
+
+                preferencesRepository.saveLocation(
+                    latitude = coords.latitude,
+                    longitude = coords.longitude,
+                    label = resolvedName,
+                    timezoneOffsetHours = tzHours,
+                    isLiveGps = true
+                )
+
+                _uiState.update {
+                    it.copy(
+                        latitude = coords.latitude,
+                        longitude = coords.longitude,
+                        altitudeMeters = coords.altitudeMeters,
+                        locationLabel = resolvedName,
+                        isLiveGpsActive = true,
+                        isFetchingGps = false,
+                        gpsAccuracyMeters = coords.accuracyMeters,
+                        gpsStatusMessage = "GPS Real-Time Aktif (±${coords.accuracyMeters.toInt()}m)"
+                    )
+                }
+                recomputeGeodesicAndPrayers(
+                    lat = coords.latitude,
+                    lon = coords.longitude,
+                    alt = coords.altitudeMeters,
+                    tzOffset = tzHours
+                )
+                refreshNearbyMosques(force = false)
+            }
+        }
+    }
+
+    fun refreshNearbyMosques(force: Boolean = true) {
+        val lat = _uiState.value.latitude
+        val lon = _uiState.value.longitude
+
+        if (!force && !lastMosqueFetchLat.isNaN() && !lastMosqueFetchLon.isNaN()) {
+            val movedMeters = QiblaCalculator.calculateDistanceBetweenPointsMeters(
+                lat1 = lastMosqueFetchLat,
+                lon1 = lastMosqueFetchLon,
+                lat2 = lat,
+                lon2 = lon
+            )
+            if (movedMeters < 200.0 && _uiState.value.nearbyMosques.isNotEmpty()) {
+                return
+            }
+        }
+
+        lastMosqueFetchLat = lat
+        lastMosqueFetchLon = lon
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingMosques = true, mosquesErrorMessage = null) }
+            val result = nearbyMosquesRepository.fetchNearbyMosques(lat, lon)
+            result.onSuccess { list ->
+                _uiState.update {
+                    it.copy(
+                        nearbyMosques = list,
+                        isLoadingMosques = false,
+                        mosquesErrorMessage = if (list.isEmpty()) {
+                            "Tidak ditemukan data masjid dalam radius 4.5 km dari titik ini."
+                        } else {
+                            null
+                        }
+                    )
+                }
+            }.onFailure {
+                _uiState.update {
+                    it.copy(
+                        isLoadingMosques = false,
+                        mosquesErrorMessage = "Menunggu koneksi internet untuk memuat daftar masjid terdekat."
                     )
                 }
             }
         }
     }
 
-    fun selectPresetCity(city: CityPreset) {
-        viewModelScope.launch {
-            preferencesRepository.saveLocation(
-                latitude = city.latitude,
-                longitude = city.longitude,
-                label = "${city.name}, ${city.country}",
-                timezoneOffsetHours = city.timezoneOffsetHours,
-                isLiveGps = false
-            )
-            _uiState.update {
-                it.copy(
-                    latitude = city.latitude,
-                    longitude = city.longitude,
-                    locationLabel = city.name,
-                    timezoneOffsetHours = city.timezoneOffsetHours,
-                    isLiveGpsActive = false,
-                    showCityPickerSheet = false,
-                    gpsStatusMessage = "Kota dipilih: ${city.name}"
-                )
-            }
-            recomputeGeodesicAndPrayers(
-                lat = city.latitude,
-                lon = city.longitude,
-                alt = 0.0,
-                tzOffset = city.timezoneOffsetHours
-            )
-        }
-    }
-
-    fun saveCustomCoordinates(lat: Double, lon: Double, customLabel: String) {
-        val clampedLat = lat.coerceIn(-90.0, 90.0)
-        val clampedLon = lon.coerceIn(-180.0, 180.0)
-        val tzHours = kotlin.math.round(clampedLon / 15.0)
-        val finalLabel = customLabel.ifBlank {
-            "Koordinat Kustom (%.3f°, %.3f°)".format(clampedLat, clampedLon)
-        }
-
-        viewModelScope.launch {
-            preferencesRepository.saveLocation(
-                latitude = clampedLat,
-                longitude = clampedLon,
-                label = finalLabel,
-                timezoneOffsetHours = tzHours,
-                isLiveGps = false
-            )
-            _uiState.update {
-                it.copy(
-                    latitude = clampedLat,
-                    longitude = clampedLon,
-                    locationLabel = finalLabel,
-                    timezoneOffsetHours = tzHours,
-                    isLiveGpsActive = false,
-                    showCityPickerSheet = false,
-                    gpsStatusMessage = "Koordinat kustom diterapkan"
-                )
-            }
-            recomputeGeodesicAndPrayers(
-                lat = clampedLat,
-                lon = clampedLon,
-                alt = 0.0,
-                tzOffset = tzHours
-            )
-        }
-    }
-
     fun selectTab(tab: QiblaNavigationTab) {
         _uiState.update { it.copy(selectedTab = tab) }
+        if (tab == QiblaNavigationTab.NEARBY_MOSQUES && _uiState.value.nearbyMosques.isEmpty()) {
+            refreshNearbyMosques(force = true)
+        }
     }
 
     fun setManualHeadingAngle(angleDeg: Float) {
@@ -492,11 +562,65 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun setShowCityPickerSheet(show: Boolean) {
-        _uiState.update { it.copy(showCityPickerSheet = show) }
+    fun toggleAdhanAutoEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setAdhanAutoEnabled(enabled)
+        }
     }
 
-    fun setShowCalibrationSheet(show: Boolean) {
-        _uiState.update { it.copy(showCalibrationSheet = show) }
+    fun selectMuezzin(muezzin: MuezzinVoiceOption) {
+        viewModelScope.launch {
+            preferencesRepository.setSelectedMuezzin(muezzin)
+            if (_uiState.value.adhanPlaybackState.isPlaying) {
+                AdhanForegroundService.startAdhan(
+                    context = appContext,
+                    prayerName = _uiState.value.adhanPlaybackState.prayerName.ifBlank { "Uji Suara Adzan" },
+                    muezzin = muezzin,
+                    isPreview = true
+                )
+            }
+        }
+    }
+
+    fun togglePrayerAdhanAlarm(prayerName: String) {
+        viewModelScope.launch {
+            preferencesRepository.togglePrayerAdhanEnabled(prayerName)
+        }
+    }
+
+    fun testOrStopAdhanPlayback(prayerName: String = "Uji Kumandang Adzan") {
+        val currentPlayback = _uiState.value.adhanPlaybackState
+        if (currentPlayback.isPlaying) {
+            AdhanForegroundService.stopAdhan(appContext)
+            AdhanNotificationHelper.cancelAllPrayerPushNotifications(appContext)
+        } else {
+            val state = _uiState.value
+            AdhanAlarmScheduler.triggerTestAlarmNotificationNow(
+                context = appContext,
+                prayerName = prayerName,
+                prayerTimeFormatted = state.nextPrayerTimeFormatted,
+                locationLabel = state.locationLabel,
+                muezzin = state.selectedMuezzin
+            )
+            AdhanNotificationHelper.showPrayerTimePushNotification(
+                context = appContext,
+                prayerName = prayerName,
+                prayerTimeFormatted = state.nextPrayerTimeFormatted,
+                locationLabel = state.locationLabel,
+                muezzin = state.selectedMuezzin,
+                isTestNotification = true
+            )
+            AdhanForegroundService.startAdhan(
+                context = appContext,
+                prayerName = prayerName,
+                muezzin = state.selectedMuezzin,
+                isPreview = true
+            )
+        }
+    }
+
+    fun stopAdhanPlayback() {
+        AdhanForegroundService.stopAdhan(appContext)
+        AdhanNotificationHelper.cancelAllPrayerPushNotifications(appContext)
     }
 }

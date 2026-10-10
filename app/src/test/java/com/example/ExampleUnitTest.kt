@@ -30,6 +30,17 @@ class ExampleUnitTest {
     }
 
     @Test
+    fun adaptiveLowPassFilterAngle_smoothsWrapAroundAndSuppressesMicroJitter() {
+        // Micro-jitter (< 0.35 deg) should be heavily damped so the needle does not vibrate
+        val steady = QiblaCalculator.adaptiveLowPassFilterAngle(295.0f, 295.2f, 0.02f)
+        assertTrue(steady in 295.0f..295.02f)
+
+        // Wrap-around across 359° -> 1° should interpolate across 0° smoothly without jumping backwards
+        val wrapped = QiblaCalculator.adaptiveLowPassFilterAngle(359.0f, 3.0f, 0.02f)
+        assertTrue(wrapped > 359.0f || wrapped < 1.0f)
+    }
+
+    @Test
     fun calculateDailyPrayerTimes_returnsSixScheduleItems() {
         val prayers = QiblaCalculator.calculateDailyPrayerTimes(
             latitude = -6.1702,

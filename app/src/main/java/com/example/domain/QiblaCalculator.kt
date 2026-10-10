@@ -48,15 +48,52 @@ object QiblaCalculator {
      * coordinates and the Holy Kaaba.
      */
     fun calculateDistanceToKaabaKm(userLat: Double, userLon: Double): Double {
-        val dLat = Math.toRadians(KAABA_LATITUDE - userLat)
-        val dLon = Math.toRadians(KAABA_LONGITUDE - userLon)
-        val rLat1 = Math.toRadians(userLat)
-        val rLat2 = Math.toRadians(KAABA_LATITUDE)
+        return calculateDistanceBetweenPointsMeters(
+            lat1 = userLat,
+            lon1 = userLon,
+            lat2 = KAABA_LATITUDE,
+            lon2 = KAABA_LONGITUDE
+        ) / 1000.0
+    }
+
+    /**
+     * Calculates exact Haversine distance in meters between any two GPS coordinates.
+     */
+    fun calculateDistanceBetweenPointsMeters(
+        lat1: Double,
+        lon1: Double,
+        lat2: Double,
+        lon2: Double
+    ): Double {
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val rLat1 = Math.toRadians(lat1)
+        val rLat2 = Math.toRadians(lat2)
 
         val a = sin(dLat / 2.0) * sin(dLat / 2.0) +
                 sin(dLon / 2.0) * sin(dLon / 2.0) * cos(rLat1) * cos(rLat2)
         val c = 2.0 * atan2(sqrt(a), sqrt(1.0 - a))
-        return EARTH_RADIUS_KM * c
+        return EARTH_RADIUS_KM * 1000.0 * c
+    }
+
+    /**
+     * Calculates the initial forward azimuth (bearing in degrees [0, 360)) from point 1 to point 2.
+     */
+    fun calculateBearingBetweenPoints(
+        lat1: Double,
+        lon1: Double,
+        lat2: Double,
+        lon2: Double
+    ): Float {
+        val phi1 = Math.toRadians(lat1)
+        val phi2 = Math.toRadians(lat2)
+        val deltaLambda = Math.toRadians(lon2 - lon1)
+
+        val y = sin(deltaLambda) * cos(phi2)
+        val x = cos(phi1) * sin(phi2) - sin(phi1) * cos(phi2) * cos(deltaLambda)
+        val thetaRadians = atan2(y, x)
+
+        return ((Math.toDegrees(thetaRadians) + 360.0) % 360.0).toFloat()
     }
 
     /**
@@ -97,17 +134,62 @@ object QiblaCalculator {
 
     /**
      * Circular Low-Pass Filter for smoothing compass heading angles across the 359° -> 0° wrap-around
-     * boundary using sin/cos vector interpolation.
+     * boundary using shortest-arc angular linear interpolation (LERP) and sin/cos vector smoothing.
      */
     fun smoothAngle(previousAngle: Float, newAngle: Float, alpha: Float): Float {
-        val prevRad = Math.toRadians(previousAngle.toDouble())
-        val newRad = Math.toRadians(newAngle.toDouble())
+        val clampedAlpha = alpha.coerceIn(0f, 1f)
+        val delta = shortestAngleDelta(previousAngle, newAngle)
+        val interpolated = previousAngle + clampedAlpha * delta
+        return ((interpolated % 360f) + 360f) % 360f
+    }
 
-        val sinSum = (1.0 - alpha) * sin(prevRad) + alpha * sin(newRad)
-        val cosSum = (1.0 - alpha) * cos(prevRad) + alpha * cos(newRad)
+    /**
+     * Adaptive Low-Pass Filter with micro-tremor deadband suppression:
+     * - Suppresses sub-degree hand micro-jitters (< 0.35°) using ultra-heavy damping so the needle
+     *   stays rock-solid when the user holds the phone steady.
+     * - Scales the interpolation factor `alpha` smoothly based on angular velocity so intentional
+     *   phone turns remain responsive without lag or overshoot.
+     */
+    fun adaptiveLowPassFilterAngle(
+        previousAngle: Float,
+        rawTargetAngle: Float,
+        dtSeconds: Float = 0.02f
+    ): Float {
+        val delta = shortestAngleDelta(previousAngle, rawTargetAngle)
+        val absDelta = kotlin.math.abs(delta)
 
-        val smoothedDeg = Math.toDegrees(atan2(sinSum, cosSum)).toFloat()
-        return (smoothedDeg + 360f) % 360f
+        // Normalize for frame/sensor interval (reference 50Hz = 0.02s)
+        val timeScale = (dtSeconds / 0.02f).coerceIn(0.4f, 2.5f)
+
+        val baseAlpha = when {
+            absDelta < 0.35f -> 0.025f // Micro-jitter deadband: virtually zero tremor when held still
+            absDelta < 1.5f -> 0.06f   // Fine stabilization for subtle hand movement
+            absDelta < 6.0f -> 0.13f   // Smooth gliding transition for gentle turns
+            absDelta < 20.0f -> 0.24f  // Responsive tracking for normal rotation
+            else -> 0.38f              // Fast catch-up for rapid reorientation
+        }
+
+        val effectiveAlpha = (baseAlpha * timeScale).coerceIn(0.015f, 0.65f)
+        return smoothAngle(previousAngle, rawTargetAngle, effectiveAlpha)
+    }
+
+    /**
+     * Applies a first-order Exponential Moving Average (Low-Pass Filter) to a 3-axis raw sensor vector
+     * (`Bx, By, Bz` or `Ax, Ay, Az`): `output[i] = output[i] + alpha * (input[i] - output[i])`.
+     */
+    fun applyVectorLowPassFilter(
+        input: FloatArray,
+        output: FloatArray?,
+        alpha: Float
+    ): FloatArray {
+        if (output == null || output.size < 3) {
+            return floatArrayOf(input[0], input[1], input[2])
+        }
+        val a = alpha.coerceIn(0.01f, 1.0f)
+        for (i in 0..2) {
+            output[i] = output[i] + a * (input[i] - output[i])
+        }
+        return output
     }
 
     /**
@@ -125,6 +207,40 @@ object QiblaCalculator {
             normalized < 292.5f -> "B (Barat)"
             else -> "BL (Barat Laut)"
         }
+    }
+
+    /**
+     * Returns standard international 2-letter cardinal abbreviation (e.g. NW, N, NE, E, SE, S, SW, W).
+     */
+    fun getShortCardinalCode(degree: Float): String {
+        val normalized = ((degree % 360f) + 360f) % 360f
+        return when {
+            normalized >= 337.5f || normalized < 22.5f -> "N"
+            normalized < 67.5f -> "NE"
+            normalized < 112.5f -> "E"
+            normalized < 157.5f -> "SE"
+            normalized < 202.5f -> "S"
+            normalized < 247.5f -> "SW"
+            normalized < 292.5f -> "W"
+            else -> "NW"
+        }
+    }
+
+    /**
+     * Formats decimal degrees into Degrees°Minutes'Seconds" Hemisphere (e.g., 7°46'2.79" S or 112°0'59.49" E).
+     */
+    fun formatToDms(coordinate: Double, isLatitude: Boolean): String {
+        val hemisphere = if (isLatitude) {
+            if (coordinate >= 0.0) "N" else "S"
+        } else {
+            if (coordinate >= 0.0) "E" else "W"
+        }
+        val absValue = kotlin.math.abs(coordinate)
+        val degrees = floor(absValue).toInt()
+        val minutesFull = (absValue - degrees) * 60.0
+        val minutes = floor(minutesFull).toInt()
+        val seconds = (minutesFull - minutes) * 60.0
+        return "%d°%d'%.2f\" %s".format(java.util.Locale.US, degrees, minutes, seconds, hemisphere)
     }
 
     /**

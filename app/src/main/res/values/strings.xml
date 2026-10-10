@@ -1,9 +1,11 @@
 <resources>
     <string name="app_name">Kompas Kiblat</string>
     <string name="app_subtitle">Navigasi Arah Ka\'bah Presisi Tinggi</string>
-    <string name="tab_compass">Kompas Kiblat</string>
+    <string name="tab_compass">Kompas</string>
+    <string name="tab_arrow">Anak panah</string>
     <string name="tab_prayer">Waktu Sholat</string>
-    <string name="tab_sensor">Sensor &amp; Kalibrasi</string>
+    <string name="tab_mosques">Masjid</string>
+    <string name="tab_sensor">Kalibrasi</string>
     <string name="qibla_aligned">TEPAT MENGHADAP KIBLAT</string>
     <string name="qibla_turn_right">Putar ke Kanan %1$d°</string>
     <string name="qibla_turn_left">Putar ke Kiri %1$d°</string>
@@ -34,4 +36,6 @@
     <string name="cd_compass_dial">Visualisasi Kompas Kiblat Interaktif</string>
     <string name="cd_location_button">Pilih atau perbarui lokasi</string>
     <string name="cd_haptic_button">Aktifkan atau nonaktifkan getaran saat menghadap kiblat</string>
+    <string name="widget_title">Jadwal Sholat &amp; Arah Kiblat</string>
+    <string name="widget_description">Menampilkan jadwal waktu sholat berikutnya, hitung mundur, dan ringkasan sudut arah Kiblat di layar utama.</string>
 </resources>
