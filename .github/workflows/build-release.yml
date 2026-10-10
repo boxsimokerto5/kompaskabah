@@ -3,14 +3,12 @@ name: Build Release APK & AAB (Google Play Ready)
 on:
   push:
     branches:
-      - main
-      - master
+      - '**'
     tags:
       - 'v*'
   pull_request:
     branches:
-      - main
-      - master
+      - '**'
   workflow_dispatch:
     inputs:
       create_release:
@@ -93,20 +91,29 @@ jobs:
           echo "Informasi Sidik Jari Keystore:"
           keytool -list -v -keystore "$KEYSTORE_FILE" -storepass "$STORE_PASS" -alias "$KEY_ALIAS" | grep -E "SHA1:|SHA256:" || true
 
-      - name: 6. Build Release AAB (Android App Bundle untuk Google Play Console)
-        run: ./gradlew bundleRelease --stacktrace
+      - name: 6. Build Release APK & AAB (Bundle & Installable APK)
+        run: ./gradlew assembleRelease bundleRelease --stacktrace
 
-      - name: 7. Build Release APK (Standalone Installable APK)
-        run: ./gradlew assembleRelease --stacktrace
-
-      - name: 8. Verifikasi Berkas Output
+      - name: 7. Siapkan Folder Artefak Rilis
         run: |
-          echo "=== Berkas AAB ==="
-          ls -lh app/build/outputs/bundle/release/
-          echo "=== Berkas APK ==="
-          ls -lh app/build/outputs/apk/release/
+          mkdir -p release-artifacts
+          cp app/build/outputs/apk/release/*.apk release-artifacts/KompasKiblat-Release.apk 2>/dev/null || cp app/build/outputs/apk/release/*.apk release-artifacts/
+          cp app/build/outputs/bundle/release/*.aab release-artifacts/KompasKiblat-Release.aab 2>/dev/null || cp app/build/outputs/bundle/release/*.aab release-artifacts/
+          if [ -f "$KEYSTORE_PATH" ]; then
+            cp "$KEYSTORE_PATH" release-artifacts/my-upload-key.jks
+          fi
+          echo "=== Berkas Artefak yang Siap Diunggah ==="
+          ls -lh release-artifacts/
 
-      - name: 9. Upload Artifact: AAB (Google Play Store)
+      - name: 8. Upload Artifact: Paket Rilis Lengkap (APK + AAB + Keystore)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kompas-Kiblat-Release-Package
+          path: release-artifacts/*
+          if-no-files-found: error
+          retention-days: 60
+
+      - name: 9. Upload Artifact: AAB Google Play Store
         uses: actions/upload-artifact@v4
         with:
           name: app-release-aab
@@ -114,7 +121,7 @@ jobs:
           if-no-files-found: error
           retention-days: 60
 
-      - name: 10. Upload Artifact: APK (Universal Installable)
+      - name: 10. Upload Artifact: APK Standalone Installable
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
@@ -122,24 +129,17 @@ jobs:
           if-no-files-found: error
           retention-days: 60
 
-      - name: 11. Upload Backup Keystore
-        uses: actions/upload-artifact@v4
-        with:
-          name: upload-keystore-backup
-          path: ${{ env.KEYSTORE_PATH }}
-          retention-days: 60
-
-      - name: 12. Publikasikan ke GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+      - name: 11. Publikasikan ke GitHub Release
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
+        continue-on-error: true
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v1.0.{0}', github.run_number) }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v1.0-build{0}', github.run_number) }}
           name: "Release v1.0 (Build ${{ github.run_number }})"
           draft: false
           prerelease: false
           generate_release_notes: true
           files: |
-            app/build/outputs/bundle/release/*.aab
-            app/build/outputs/apk/release/*.apk
+            release-artifacts/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
