@@ -1,0 +1,46 @@
+package com.example
+
+import com.example.domain.QiblaCalculator
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class ExampleUnitTest {
+
+    @Test
+    fun calculateQiblaBearing_fromJakarta_returnsAccurateAzimuth() {
+        // Jakarta (Masjid Istiqlal): -6.1702, 106.8314 -> Qibla is ~295.15° (West-Northwest)
+        val bearing = QiblaCalculator.calculateQiblaBearing(-6.1702, 106.8314)
+        assertEquals(295.15, bearing, 0.25)
+    }
+
+    @Test
+    fun calculateDistanceToKaaba_fromJakarta_returnsAccurateKilometers() {
+        val distanceKm = QiblaCalculator.calculateDistanceToKaabaKm(-6.1702, 106.8314)
+        assertTrue(distanceKm in 7900.0..7940.0)
+    }
+
+    @Test
+    fun shortestAngleDelta_handlesWrapAroundCorrectly() {
+        val deltaRight = QiblaCalculator.shortestAngleDelta(350f, 10f)
+        assertEquals(20f, deltaRight, 0.01f)
+
+        val deltaLeft = QiblaCalculator.shortestAngleDelta(10f, 350f)
+        assertEquals(-20f, deltaLeft, 0.01f)
+    }
+
+    @Test
+    fun calculateDailyPrayerTimes_returnsSixScheduleItems() {
+        val prayers = QiblaCalculator.calculateDailyPrayerTimes(
+            latitude = -6.1702,
+            longitude = 106.8314,
+            timezoneOffsetHours = 7.0,
+            year = 2026,
+            month = 10,
+            day = 10
+        )
+        assertEquals(6, prayers.size)
+        assertEquals("Subuh", prayers.first().nameId)
+        assertEquals("Isya", prayers.last().nameId)
+    }
+}

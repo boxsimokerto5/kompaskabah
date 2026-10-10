@@ -1,0 +1,37 @@
+<resources>
+    <string name="app_name">Kompas Kiblat</string>
+    <string name="app_subtitle">Navigasi Arah Ka\'bah Presisi Tinggi</string>
+    <string name="tab_compass">Kompas Kiblat</string>
+    <string name="tab_prayer">Waktu Sholat</string>
+    <string name="tab_sensor">Sensor &amp; Kalibrasi</string>
+    <string name="qibla_aligned">TEPAT MENGHADAP KIBLAT</string>
+    <string name="qibla_turn_right">Putar ke Kanan %1$d°</string>
+    <string name="qibla_turn_left">Putar ke Kiri %1$d°</string>
+    <string name="qibla_almost_aligned">Hampir Tepat (%1$d° lagi)</string>
+    <string name="label_qibla_bearing">Sudut Kiblat</string>
+    <string name="label_current_heading">Arah Ponsel</string>
+    <string name="label_distance_kaaba">Jarak ke Ka\'bah</string>
+    <string name="label_magnetic_declination">Deklinasi Magnetik</string>
+    <string name="label_magnetic_field">Medan Magnet</string>
+    <string name="label_device_tilt">Kemiringan Ponsel</string>
+    <string name="status_gps_live">GPS Real-Time Aktif</string>
+    <string name="status_gps_searching">Mencari Sinyal GPS…</string>
+    <string name="status_manual_city">Lokasi: %1$s</string>
+    <string name="btn_grant_gps">Aktifkan Akurasi GPS</string>
+    <string name="btn_refresh_gps">Perbarui GPS</string>
+    <string name="btn_select_city">Pilih Kota</string>
+    <string name="btn_calibrate_guide">Panduan Kalibrasi</string>
+    <string name="accuracy_high">Akurasi Tinggi</string>
+    <string name="accuracy_medium">Akurasi Sedang</string>
+    <string name="accuracy_low">Perlu Kalibrasi</string>
+    <string name="accuracy_unreliable">Interferensi Magnetik</string>
+    <string name="sensor_Simulation_banner">Mode Simulasi Interaktif (Sensor Fisik Tidak Terdeteksi)</string>
+    <string name="tilt_warning">Letakkan ponsel mendatar (sejajar permukaan) untuk akurasi kompas terbaik</string>
+    <string name="haptic_toggle_label">Getar Saat Tepat Kiblat</string>
+    <string name="true_north_toggle_label">Koreksi Kutub Utara Sejati (True North)</string>
+    <string name="kaaba_coordinates_info">Ka\'bah (Masjidil Haram): 21.4225° LU, 39.8262° BT</string>
+    <string name="cd_kaaba_hero">Ilustrasi Ka\'bah Masjidil Haram</string>
+    <string name="cd_compass_dial">Visualisasi Kompas Kiblat Interaktif</string>
+    <string name="cd_location_button">Pilih atau perbarui lokasi</string>
+    <string name="cd_haptic_button">Aktifkan atau nonaktifkan getaran saat menghadap kiblat</string>
+</resources>
