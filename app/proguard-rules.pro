@@ -35,3 +35,7 @@
 -keep class com.facebook.ads.** { *; }
 -keepclassmembers class com.facebook.ads.** { *; }
 -dontwarn com.facebook.ads.**
+
+# Google Play In-App Updates
+-keep class com.google.android.play.core.appupdate.** { *; }
+-keep class com.google.android.play.core.install.** { *; }

@@ -13,7 +13,7 @@ android {
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.aistudio.qiblacompass.kxmpzq"
+    applicationId = "com.kompaskiblat.gecckocreator"
     minSdk = 24
     targetSdk = 36
     versionCode = 1
@@ -147,6 +147,7 @@ dependencies {
   implementation(libs.meta.audience.network.sdk)
   implementation(libs.play.services.ads.identifier)
   implementation(libs.play.services.appset)
+  implementation(libs.play.app.update)
   // implementation(libs.retrofit)
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
