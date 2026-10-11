@@ -6,6 +6,12 @@ import android.content.Context
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
@@ -13,6 +19,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -580,38 +589,145 @@ private fun ModernAmalanBannerCard(
                     )
                 }
 
-                // Kolom Kanan: Tombol Kapsul Rounded 3D yang Sangat Kontras (Seperti "Mainkan" di Gambar 2)
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    shadowElevation = 5.dp,
-                    color = Color.Transparent,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .clickable { onClick() }
-                        .testTag("btn_action_${category.name.lowercase()}")
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .background(Brush.horizontalGradient(theme.ctaGradient))
-                            .border(
-                                width = 1.dp,
-                                color = Color.White.copy(alpha = 0.45f),
-                                shape = RoundedCornerShape(50)
-                            )
-                            .padding(horizontal = 18.dp, vertical = 11.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = theme.ctaLabel,
-                            color = theme.ctaTextColor,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.ExtraBold,
-                            maxLines = 1,
-                            letterSpacing = 0.3.sp
-                        )
-                    }
-                }
+                // Kolom Kanan: Tombol Timbul 3D Berdenyut Khas Game (Pulsing 3D Game Capsule Button)
+                GamePulsing3DButton(
+                    label = theme.ctaLabel,
+                    textColor = theme.ctaTextColor,
+                    gradientColors = theme.ctaGradient,
+                    onClick = onClick,
+                    testTag = "btn_action_${category.name.lowercase()}"
+                )
             }
+        }
+    }
+}
+
+/**
+ * Tombol Timbul 3D Berdenyut (Game-Style Pulsing 3D Capsule Button)
+ * Menampilkan efek timbul dengan bevel gelap di bawah, kilau specular highlight di atas,
+ * dan animasi denyut lembut (breathing/pulse) yang hidup.
+ */
+@Composable
+private fun GamePulsing3DButton(
+    label: String,
+    textColor: Color,
+    gradientColors: List<Color>,
+    onClick: () -> Unit,
+    testTag: String,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "btn_pulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.97f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(850, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.30f,
+        targetValue = 0.75f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(850, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glow"
+    )
+
+    val bottomBevelColor = remember(gradientColors) {
+        val base = gradientColors.firstOrNull() ?: Color(0xFFD4AF37)
+        Color(
+            red = (base.red * 0.42f).coerceIn(0f, 1f),
+            green = (base.green * 0.42f).coerceIn(0f, 1f),
+            blue = (base.blue * 0.42f).coerceIn(0f, 1f),
+            alpha = 1.0f
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .scale(pulseScale)
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(50),
+                ambientColor = gradientColors.last().copy(alpha = glowAlpha),
+                spotColor = gradientColors.first().copy(alpha = glowAlpha)
+            )
+            .clip(RoundedCornerShape(50))
+            .clickable { onClick() }
+            .testTag(testTag),
+        contentAlignment = Alignment.Center
+    ) {
+        // Lapisan 1: Dasar Tebal 3D (Bevel Gelap Bawah)
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(bottomBevelColor)
+        )
+
+        // Lapisan 2: Tutup Muka Timbul 3D (Offset ke atas menyisakan bevel bawah 3.5dp)
+        Box(
+            modifier = Modifier
+                .padding(bottom = 3.5.dp)
+                .clip(RoundedCornerShape(50))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.28f),
+                            Color.Transparent
+                        )
+                    )
+                )
+                .background(Brush.horizontalGradient(gradientColors))
+                .border(
+                    width = 1.2.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.85f),
+                            Color.White.copy(alpha = 0.20f),
+                            Color.Black.copy(alpha = 0.30f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(50)
+                )
+                .padding(horizontal = 18.dp, vertical = 9.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            // Lapisan 3: Kilau Kaca Mengkilap (Specular Gel Sheen di Bagian Atas)
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .padding(bottom = 8.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.45f),
+                                Color.White.copy(alpha = 0.08f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+
+            // Teks Label Timbul Kontras Tinggi
+            Text(
+                text = label,
+                color = textColor,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    shadow = Shadow(
+                        color = Color.White.copy(alpha = 0.50f),
+                        offset = Offset(0f, 1f),
+                        blurRadius = 2f
+                    )
+                ),
+                fontWeight = FontWeight.Black,
+                maxLines = 1,
+                letterSpacing = 0.4.sp
+            )
         }
     }
 }
