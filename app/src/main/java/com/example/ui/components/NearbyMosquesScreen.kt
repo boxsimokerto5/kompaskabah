@@ -3,11 +3,20 @@ package com.example.ui.components
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import java.util.Locale
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +26,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -47,6 +57,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,8 +67,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -315,48 +333,95 @@ fun NearbyMosquesScreen(
                 .padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Top Action Row: Open Google Maps Mosque Search & Refresh List
+            // Top Action Row: 3D Raised Pulsing "Buka Google Maps" Button (Top-Left) & Refresh Button
+            val mapsInfiniteTransition = rememberInfiniteTransition(label = "maps_btn_pulse")
+            val mapsBtnPulseScale by mapsInfiniteTransition.animateFloat(
+                initialValue = 1.0f,
+                targetValue = 1.035f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1100, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "maps_btn_scale"
+            )
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(
-                    onClick = {
-                        openGoogleMapsSearchNearby(
-                            context = context,
-                            lat = uiState.latitude,
-                            lon = uiState.longitude
-                        )
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(14.dp),
+                // Game-like 3D Pulsing Raised Action Button for Open Google Maps (Top-Left)
+                Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(48.dp)
-                        .testTag("open_google_maps_mosques_button")
+                        .height(52.dp)
+                        .scale(mapsBtnPulseScale)
+                        .shadow(
+                            elevation = 6.dp,
+                            shape = RoundedCornerShape(16.dp),
+                            ambientColor = DeepEmeraldPrimary.copy(alpha = 0.35f),
+                            spotColor = DeepEmeraldPrimary
+                        )
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF22C55E),
+                                    Color(0xFF15803D),
+                                    Color(0xFF0F5B2D)
+                                )
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .border(
+                            width = 1.5.dp,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF86EFAC),
+                                    Color(0xFF15803D)
+                                )
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = ripple(color = Color.White)
+                        ) {
+                            openGoogleMapsSearchNearby(
+                                context = context,
+                                lat = uiState.latitude,
+                                lon = uiState.longitude
+                            )
+                        }
+                        .padding(horizontal = 14.dp)
+                        .testTag("open_google_maps_mosques_button"),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Map,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Buka Google Maps",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Map,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = "Buka Google Maps",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            maxLines = 1
+                        )
+                    }
                 }
 
                 OutlinedButton(
                     onClick = onRefreshGpsAndMosques,
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
-                        .height(48.dp)
+                        .height(52.dp)
                         .testTag("refresh_mosques_list_button")
                 ) {
                     Icon(
@@ -367,10 +432,23 @@ fun NearbyMosquesScreen(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Segarkan",
-                        style = MaterialTheme.typography.titleSmall
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
+
+            // Kotak Informasi Navigasi Langsung dengan Tanda Panah Animasi Berdenyut 3D ke Kiri Atas
+            MosqueRadarInfoBox(
+                uiState = uiState,
+                onOpenGoogleMaps = {
+                    openGoogleMapsSearchNearby(
+                        context = context,
+                        lat = uiState.latitude,
+                        lon = uiState.longitude
+                    )
+                }
+            )
 
             // Interactive Filter Chips Row
             if (uiState.nearbyMosques.isNotEmpty()) {
@@ -772,5 +850,397 @@ private fun openGoogleMapsSearchNearby(context: Context, lat: Double, lon: Doubl
         }
     } catch (e: Exception) {
         // Ignore if no browser/maps handler is installed
+    }
+}
+
+/**
+ * 3D pulsating animated arrow pointing diagonally towards the top-left (↖),
+ * specifically guiding the user towards the "Buka Google Maps" button.
+ * Incorporates specular 3D bevels, depth extrusion shadows, radial glowing aura,
+ * and dynamic directional pulsing towards the Northwest quadrant.
+ */
+@Composable
+fun Pulsing3DTopLeftArrow(
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "arrow_3d_pulse_transition")
+
+    // Pulsing scale
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.94f,
+        targetValue = 1.16f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_scale"
+    )
+
+    // Directional bounce translation towards top-left (negative X and negative Y)
+    val bounceShift by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = -7.5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "bounce_shift"
+    )
+
+    // Outer glow aura alpha oscillation
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 0.80f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glow_alpha"
+    )
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(56.dp)
+            .scale(pulseScale)
+    ) {
+        Canvas(
+            modifier = Modifier
+                .size(56.dp)
+                .offset(x = bounceShift.dp, y = bounceShift.dp)
+        ) {
+            val center = Offset(size.width / 2f, size.height / 2f)
+            val outerRadius = size.minDimension * 0.44f
+
+            // 1. Pulsing Outer Radial Halo / Glow Aura
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFF22C55E).copy(alpha = glowAlpha * 0.60f),
+                        Color(0xFFEAB308).copy(alpha = glowAlpha * 0.35f),
+                        Color.Transparent
+                    ),
+                    center = center,
+                    radius = outerRadius * 1.35f
+                ),
+                radius = outerRadius * 1.35f,
+                center = center
+            )
+
+            // 2. 3D Badge Base Plate (Plaque) with Beveled Edge
+            // Base shadow offset down-right (+2.5, +3.5)
+            drawCircle(
+                color = Color(0xFF031A0F).copy(alpha = 0.55f),
+                radius = outerRadius,
+                center = Offset(center.x + 2.5f, center.y + 3.5f)
+            )
+
+            // Base plate gradient (deep rich emerald tone)
+            drawCircle(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFF166534),
+                        Color(0xFF0F4424),
+                        Color(0xFF062B16)
+                    ),
+                    start = Offset(center.x - outerRadius, center.y - outerRadius),
+                    end = Offset(center.x + outerRadius, center.y + outerRadius)
+                ),
+                radius = outerRadius,
+                center = center
+            )
+
+            // Specular border ring for 3D metallic bevel look
+            drawCircle(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFF86EFAC), // Highlight top-left
+                        Color(0xFF22C55E),
+                        Color(0xFF052E16)  // Shadow bottom-right
+                    ),
+                    start = Offset(center.x - outerRadius, center.y - outerRadius),
+                    end = Offset(center.x + outerRadius, center.y + outerRadius)
+                ),
+                radius = outerRadius,
+                center = center,
+                style = Stroke(width = 2.5.dp.toPx())
+            )
+
+            // 3. Arrow pointing Top-Left:
+            // Drawn pointing straight UP, then rotated by -45 degrees around center
+            rotate(degrees = -45f, pivot = center) {
+                val arrowH = outerRadius * 1.25f
+                val arrowW = outerRadius * 0.85f
+                val stemW = arrowW * 0.42f
+                val headH = arrowH * 0.52f
+
+                val topY = center.y - arrowH * 0.52f
+                val headBottomY = topY + headH
+                val stemBottomY = center.y + arrowH * 0.48f
+
+                // Construct arrow polygon
+                val arrowPath = Path().apply {
+                    moveTo(center.x, topY) // Tip
+                    lineTo(center.x + arrowW * 0.55f, headBottomY) // Right arrowhead wing
+                    lineTo(center.x + stemW * 0.5f, headBottomY) // Right shoulder
+                    lineTo(center.x + stemW * 0.5f, stemBottomY) // Right bottom
+                    lineTo(center.x - stemW * 0.5f, stemBottomY) // Left bottom
+                    lineTo(center.x - stemW * 0.5f, headBottomY) // Left shoulder
+                    lineTo(center.x - arrowW * 0.55f, headBottomY) // Left arrowhead wing
+                    close()
+                }
+
+                // A) 3D Depth Extrusion (Shadow layer offset down-right)
+                val shadowPath = Path().apply {
+                    moveTo(center.x + 2.5f, topY + 3f)
+                    lineTo(center.x + arrowW * 0.55f + 2.5f, headBottomY + 3f)
+                    lineTo(center.x + stemW * 0.5f + 2.5f, headBottomY + 3f)
+                    lineTo(center.x + stemW * 0.5f + 2.5f, stemBottomY + 3f)
+                    lineTo(center.x - stemW * 0.5f + 2.5f, stemBottomY + 3f)
+                    lineTo(center.x - stemW * 0.5f + 2.5f, headBottomY + 3f)
+                    lineTo(center.x - arrowW * 0.55f + 2.5f, headBottomY + 3f)
+                    close()
+                }
+                drawPath(path = shadowPath, color = Color(0xFF03220F).copy(alpha = 0.75f))
+
+                // B) Vibrant 3D Arrow Gradient (Lime-Emerald to Gold/Cyan)
+                drawPath(
+                    path = arrowPath,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFFFDE047), // Gold highlight at tip
+                            Color(0xFF4ADE80), // Vibrant emerald body
+                            Color(0xFF16A34A)  // Deep emerald bottom
+                        ),
+                        startY = topY,
+                        endY = stemBottomY
+                    )
+                )
+
+                // C) 3D Highlight Ridge down the center line & left edge
+                drawLine(
+                    color = Color.White.copy(alpha = 0.85f),
+                    start = Offset(center.x, topY + 2f),
+                    end = Offset(center.x, stemBottomY - 2f),
+                    strokeWidth = 2.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+
+                // Left bevel highlight
+                drawLine(
+                    color = Color.White.copy(alpha = 0.75f),
+                    start = Offset(center.x, topY + 2f),
+                    end = Offset(center.x - arrowW * 0.55f, headBottomY),
+                    strokeWidth = 1.5.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Kotak Informasi Navigasi Google Maps:
+ * Prominent information box immediately visible on the nearby mosque page.
+ * Contains:
+ * - 3D pulsating animated arrow pointing to the top-left (open Google Maps button)
+ * - Navigation and satellite radar guidance
+ * - Real-time GPS status, current coordinates, search radius, and direct tap affordance.
+ */
+@Composable
+private fun MosqueRadarInfoBox(
+    uiState: QiblaUiState,
+    onOpenGoogleMaps: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .border(
+                width = 1.5.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        AlignedEmerald.copy(alpha = 0.70f),
+                        MeccaGold.copy(alpha = 0.50f),
+                        DeepEmeraldPrimary.copy(alpha = 0.30f)
+                    )
+                ),
+                shape = RoundedCornerShape(22.dp)
+            )
+            .clickable { onOpenGoogleMaps() }
+            .testTag("mosque_radar_info_box")
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // 1. Top Section: 3D Pulsating Arrow Pointing Top-Left + Header Text
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // 3D Animated Pulsating Arrow pointing to Top-Left (↖)
+                Pulsing3DTopLeftArrow()
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = AlignedEmerald.copy(alpha = 0.14f),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            AlignedEmerald.copy(alpha = 0.4f)
+                        )
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = "PETUNJUK NAVIGASI ↖",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = AlignedEmerald,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Peta & Rute Google Maps",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Ketuk tombol hijau di atas kiri untuk melihat peta interaktif satelit",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // 2. Info Description
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Explore,
+                        contentDescription = null,
+                        tint = DeepEmeraldPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = "Google Maps menyediakan panduan navigasi belokan demi belokan (turn-by-turn), info macet real-time, foto aula sholat & tempat wudhu dari jamaah sekitar.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = MaterialTheme.typography.bodySmall.lineHeight
+                    )
+                }
+            }
+
+            // 3. Telemetry & Live GPS Status Grid
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Posisi GPS
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text(
+                            text = "LOKASI GPS",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = DeepGoldAccent,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = uiState.locationLabel,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                // Koordinat & Radius
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text(
+                            text = "KOORDINAT",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = DeepGoldAccent,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = String.format(Locale.US, "%.4f, %.4f", uiState.latitude, uiState.longitude),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            // 4. Tap action callout
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Directions,
+                        contentDescription = null,
+                        tint = AlignedEmerald,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Langsung buka Google Maps",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = AlignedEmerald,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Text(
+                    text = "Buka Peta ➔",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = DeepEmeraldPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
     }
 }

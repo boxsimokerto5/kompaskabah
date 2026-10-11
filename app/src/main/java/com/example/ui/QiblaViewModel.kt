@@ -168,10 +168,7 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
                     val effectiveHeading = computeEffectiveHeading(
                         rawMagnetic = current.rawMagneticAzimuthDeg,
                         declination = current.magneticDeclinationDeg,
-                        useTrueNorth = prefs.useTrueNorthCorrection,
-                        isManual = current.isManualRotationOverride,
-                        manualAngle = current.manualHeadingOffsetDeg,
-                        hasHardware = current.isHardwareSensorAvailable
+                        useTrueNorth = prefs.useTrueNorthCorrection
                     )
                     val latToUse = if (current.isLiveGpsActive) current.latitude else prefs.latitude
                     val lonToUse = if (current.isLiveGpsActive) current.longitude else prefs.longitude
@@ -233,10 +230,7 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
                     val effectiveHeading = computeEffectiveHeading(
                         rawMagnetic = reading.magneticAzimuthDeg,
                         declination = current.magneticDeclinationDeg,
-                        useTrueNorth = current.useTrueNorthCorrection,
-                        isManual = current.isManualRotationOverride,
-                        manualAngle = current.manualHeadingOffsetDeg,
-                        hasHardware = reading.isHardwareSensorAvailable
+                        useTrueNorth = current.useTrueNorthCorrection
                     )
                     current.copy(
                         rawMagneticAzimuthDeg = reading.magneticAzimuthDeg,
@@ -246,7 +240,8 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
                         magneticFieldStrengthUt = reading.magneticFieldStrengthUt,
                         sensorAccuracy = reading.accuracy,
                         sensorSourceName = reading.sensorSourceName,
-                        isHardwareSensorAvailable = reading.isHardwareSensorAvailable
+                        isHardwareSensorAvailable = reading.isHardwareSensorAvailable,
+                        isManualRotationOverride = false
                     )
                 }
             }
@@ -256,14 +251,8 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
     private fun computeEffectiveHeading(
         rawMagnetic: Float,
         declination: Float,
-        useTrueNorth: Boolean,
-        isManual: Boolean,
-        manualAngle: Float,
-        hasHardware: Boolean
+        useTrueNorth: Boolean
     ): Float {
-        if (isManual || !hasHardware) {
-            return ((manualAngle % 360f) + 360f) % 360f
-        }
         val corrected = if (useTrueNorth) rawMagnetic + declination else rawMagnetic
         return ((corrected % 360f) + 360f) % 360f
     }
@@ -311,10 +300,7 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
             val effectiveHeading = computeEffectiveHeading(
                 rawMagnetic = current.rawMagneticAzimuthDeg,
                 declination = declination,
-                useTrueNorth = current.useTrueNorthCorrection,
-                isManual = current.isManualRotationOverride,
-                manualAngle = current.manualHeadingOffsetDeg,
-                hasHardware = current.isHardwareSensorAvailable
+                useTrueNorth = current.useTrueNorthCorrection
             )
             current.copy(
                 qiblaBearingTrueNorthDeg = bearing,
@@ -513,19 +499,13 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setManualHeadingAngle(angleDeg: Float) {
-        val normalized = ((angleDeg % 360f) + 360f) % 360f
-        _uiState.update { current ->
-            current.copy(
-                isManualRotationOverride = true,
-                manualHeadingOffsetDeg = normalized,
-                effectiveDeviceHeadingDeg = normalized
-            )
-        }
+        // No-op: Pure physical sensor mode is enforced
+        resumeLiveSensorTracking()
     }
 
     fun snapToQiblaForPreview() {
-        val target = _uiState.value.qiblaBearingTrueNorthDeg
-        setManualHeadingAngle(target)
+        // No-op: Pure physical sensor mode is enforced
+        resumeLiveSensorTracking()
     }
 
     fun resumeLiveSensorTracking() {
@@ -533,10 +513,7 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
             val effective = computeEffectiveHeading(
                 rawMagnetic = current.rawMagneticAzimuthDeg,
                 declination = current.magneticDeclinationDeg,
-                useTrueNorth = current.useTrueNorthCorrection,
-                isManual = false,
-                manualAngle = 0f,
-                hasHardware = current.isHardwareSensorAvailable
+                useTrueNorth = current.useTrueNorthCorrection
             )
             current.copy(
                 isManualRotationOverride = false,

@@ -132,9 +132,6 @@ fun QiblaCompassCanvas(
 
     val textMeasurer = rememberTextMeasurer()
 
-    var dragStartAngle by remember { mutableFloatStateOf(0f) }
-    var headingAtDragStart by remember { mutableFloatStateOf(0f) }
-
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -142,36 +139,7 @@ fun QiblaCompassCanvas(
             .padding(6.dp)
             .testTag("qibla_compass_dial")
             .semantics {
-                contentDescription = "Visualisasi Kompas Kiblat Interaktif. Geser melingkar untuk simulasi putaran."
-            }
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        val centerX = size.width / 2f
-                        val centerY = size.height / 2f
-                        dragStartAngle = Math.toDegrees(
-                            atan2(
-                                (offset.y - centerY).toDouble(),
-                                (offset.x - centerX).toDouble()
-                            )
-                        ).toFloat()
-                        headingAtDragStart = deviceHeadingDeg
-                    },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        val centerX = size.width / 2f
-                        val centerY = size.height / 2f
-                        val currentTouchAngle = Math.toDegrees(
-                            atan2(
-                                (change.position.y - centerY).toDouble(),
-                                (change.position.x - centerX).toDouble()
-                            )
-                        ).toFloat()
-                        val deltaTouch = currentTouchAngle - dragStartAngle
-                        val newHeading = ((headingAtDragStart - deltaTouch) % 360f + 360f) % 360f
-                        onManualRotate(newHeading)
-                    }
-                )
+                contentDescription = "Visualisasi Kompas Kiblat Presisi Real-time berbasis Sensor Hardware Magnetometer."
             },
         contentAlignment = Alignment.Center
     ) {

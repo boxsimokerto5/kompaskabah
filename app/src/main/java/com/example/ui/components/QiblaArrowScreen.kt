@@ -526,47 +526,14 @@ private fun InteractiveKaabaArrowPointer(
         label = "medallion_fill_color"
     )
 
-    var dragStartAngle by remember { mutableFloatStateOf(0f) }
-    var headingAtDragStart by remember { mutableFloatStateOf(0f) }
-
     Box(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f)
             .testTag("qibla_arrow_canvas")
             .semantics {
-                contentDescription = "Visualisasi Anak Panah Kiblat. Geser melingkar untuk memutar arah."
-            }
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        val centerX = size.width / 2f
-                        val centerY = size.height / 2f
-                        dragStartAngle = Math.toDegrees(
-                            atan2(
-                                (offset.y - centerY).toDouble(),
-                                (offset.x - centerX).toDouble()
-                            )
-                        ).toFloat()
-                        headingAtDragStart = deviceHeadingDeg
-                    },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        val centerX = size.width / 2f
-                        val centerY = size.height / 2f
-                        val currentTouchAngle = Math.toDegrees(
-                            atan2(
-                                (change.position.y - centerY).toDouble(),
-                                (change.position.x - centerX).toDouble()
-                            )
-                        ).toFloat()
-                        val deltaTouch = currentTouchAngle - dragStartAngle
-                        val newHeading = ((headingAtDragStart - deltaTouch) % 360f + 360f) % 360f
-                        onManualRotate(newHeading)
-                    }
-                )
-            }
-            .clickable { onDoubleTapOrClick() },
+                contentDescription = "Visualisasi Penunjuk Arah Kiblat Presisi Real-time berbasis Sensor Hardware Magnetometer."
+            },
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {

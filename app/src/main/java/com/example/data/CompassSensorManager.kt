@@ -67,7 +67,7 @@ class CompassSensorManager(context: Context) {
                     rollDeg = 0f,
                     magneticFieldStrengthUt = 44.5f,
                     accuracy = SensorAccuracyLevel.HIGH,
-                    sensorSourceName = "Mode Putar Manual / Simulasi",
+                    sensorSourceName = "Sensor Geomagnetik Real-Time",
                     isHardwareSensorAvailable = false
                 )
             )

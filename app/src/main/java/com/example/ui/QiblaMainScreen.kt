@@ -12,6 +12,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -56,9 +61,11 @@ import androidx.compose.material.icons.filled.Mosque
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.NorthEast
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -85,6 +92,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -281,6 +289,9 @@ fun QiblaMainScreen(
                                 onResumeSensor = onResumeSensor,
                                 onSwitchToArrowMode = {
                                     onSelectTab(QiblaNavigationTab.ARROW_POINTER)
+                                },
+                                onOpenCalibration = {
+                                    onSelectTab(QiblaNavigationTab.SENSOR_DIAGNOSTICS)
                                 }
                             )
                         }
@@ -552,7 +563,8 @@ private fun CompassDashboardContent(
     onManualRotate: (Float) -> Unit,
     onSnapToQibla: () -> Unit,
     onResumeSensor: () -> Unit,
-    onSwitchToArrowMode: () -> Unit
+    onSwitchToArrowMode: () -> Unit,
+    onOpenCalibration: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
 
@@ -598,11 +610,10 @@ private fun CompassDashboardContent(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     CleanTelemetryStrip(uiState = uiState)
-                    QuickSimulationActionsRow(
+                    CompassSensorStatusAndActionBar(
                         uiState = uiState,
-                        onSnapToQibla = onSnapToQibla,
-                        onResumeSensor = onResumeSensor,
-                        onSwitchToArrowMode = onSwitchToArrowMode
+                        onSwitchToArrowMode = onSwitchToArrowMode,
+                        onOpenCalibration = onOpenCalibration
                     )
                 }
             }
@@ -645,11 +656,10 @@ private fun CompassDashboardContent(
                     modifier = Modifier.widthIn(max = 560.dp)
                 )
 
-                QuickSimulationActionsRow(
+                CompassSensorStatusAndActionBar(
                     uiState = uiState,
-                    onSnapToQibla = onSnapToQibla,
-                    onResumeSensor = onResumeSensor,
                     onSwitchToArrowMode = onSwitchToArrowMode,
+                    onOpenCalibration = onOpenCalibration,
                     modifier = Modifier.widthIn(max = 560.dp)
                 )
 
@@ -992,92 +1002,150 @@ private fun CompactMetricCard(
 }
 
 @Composable
-private fun QuickSimulationActionsRow(
+private fun CompassSensorStatusAndActionBar(
     uiState: QiblaUiState,
-    onSnapToQibla: () -> Unit,
-    onResumeSensor: () -> Unit,
     onSwitchToArrowMode: () -> Unit,
+    onOpenCalibration: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse_transition")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = 1.045f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "btn_pulse_scale"
+    )
+
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        FilterChip(
-            selected = false,
-            onClick = onSwitchToArrowMode,
-            label = {
-                Text(
-                    text = "Mode Anak Panah",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MenuActiveBlue
+        // 1. Game-like 3D Pulsing Raised Action Button for Arrow Mode
+        Box(
+            modifier = Modifier
+                .scale(pulseScale)
+                .shadow(
+                    elevation = 6.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    ambientColor = MenuActiveBlue.copy(alpha = 0.35f),
+                    spotColor = MenuActiveBlue
                 )
-            },
-            leadingIcon = {
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF38A5F8),
+                            Color(0xFF167AC6),
+                            Color(0xFF0F5A94)
+                        )
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .border(
+                    width = 1.5.dp,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFFBCE3FF),
+                            Color(0xFF167AC6)
+                        )
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .clip(RoundedCornerShape(16.dp))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = ripple(color = Color.White)
+                ) { onSwitchToArrowMode() }
+                .padding(horizontal = 16.dp, vertical = 9.dp)
+                .testTag("switch_to_arrow_mode_3d_btn")
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 Icon(
                     imageVector = Icons.Default.NorthEast,
                     contentDescription = null,
-                    tint = MenuActiveBlue,
-                    modifier = Modifier.size(16.dp)
+                    tint = Color.White,
+                    modifier = Modifier.size(17.dp)
                 )
-            },
-            colors = FilterChipDefaults.filterChipColors(
-                containerColor = MenuInactiveSoftBlue
-            ),
-            border = FilterChipDefaults.filterChipBorder(
-                enabled = true,
-                selected = false,
-                borderColor = MenuActiveBlue.copy(alpha = 0.35f)
-            ),
-            modifier = Modifier.testTag("switch_to_arrow_mode_chip")
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        FilterChip(
-            selected = uiState.isAlignedWithKaaba,
-            onClick = onSnapToQibla,
-            label = {
                 Text(
-                    text = if (uiState.isAlignedWithKaaba) {
-                        "Tepat Kiblat"
-                    } else {
-                        "Simulasi Kiblat"
-                    },
-                    style = MaterialTheme.typography.labelMedium
+                    text = "Mode Penunjuk 3D",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
                 )
-            },
-            leadingIcon = {
+            }
+        }
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        // 2. Real Physical Hardware Sensor Status Indicator Chip
+        val isAligned = uiState.isAlignedWithKaaba
+        val isTilted = uiState.isDeviceTilted
+        val hasInterference = uiState.hasMagneticInterference
+
+        val statusBg = when {
+            isAligned -> AlignedEmerald.copy(alpha = 0.16f)
+            hasInterference -> DangerCoral.copy(alpha = 0.16f)
+            isTilted -> Color(0xFFF59E0B).copy(alpha = 0.16f)
+            else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f)
+        }
+        val statusBorder = when {
+            isAligned -> AlignedEmerald.copy(alpha = 0.55f)
+            hasInterference -> DangerCoral.copy(alpha = 0.55f)
+            isTilted -> Color(0xFFF59E0B).copy(alpha = 0.55f)
+            else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+        }
+        val statusIcon = when {
+            isAligned -> Icons.Default.CheckCircle
+            hasInterference -> Icons.Default.CompassCalibration
+            isTilted -> Icons.Default.WarningAmber
+            else -> Icons.Default.Sensors
+        }
+        val statusTint = when {
+            isAligned -> AlignedEmerald
+            hasInterference -> DangerCoral
+            isTilted -> Color(0xFFD97706)
+            else -> MaterialTheme.colorScheme.primary
+        }
+        val statusLabel = when {
+            isAligned -> "Tepat Kiblat ✓"
+            hasInterference -> "Kalibrasi (8)"
+            isTilted -> "Letakkan Datar"
+            else -> "Sensor Hardware"
+        }
+
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = statusBg,
+            modifier = Modifier
+                .border(width = 1.dp, color = statusBorder, shape = RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(16.dp))
+                .clickable { onOpenCalibration() }
+                .testTag("hardware_sensor_status_chip")
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 Icon(
-                    imageVector = Icons.Default.Explore,
+                    imageVector = statusIcon,
                     contentDescription = null,
+                    tint = statusTint,
                     modifier = Modifier.size(16.dp)
                 )
-            },
-            colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = AlignedEmerald.copy(alpha = 0.16f),
-                selectedLabelColor = AlignedEmerald,
-                selectedLeadingIconColor = AlignedEmerald
-            ),
-            modifier = Modifier.testTag("snap_to_qibla_chip")
-        )
-
-        if (uiState.isManualRotationOverride && uiState.isHardwareSensorAvailable) {
-            Spacer(modifier = Modifier.width(8.dp))
-            FilterChip(
-                selected = false,
-                onClick = onResumeSensor,
-                label = { Text("Reset", style = MaterialTheme.typography.labelMedium) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                },
-                modifier = Modifier.testTag("resume_sensor_chip")
-            )
+                Text(
+                    text = statusLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = statusTint
+                )
+            }
         }
     }
 }

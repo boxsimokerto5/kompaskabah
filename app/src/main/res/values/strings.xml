@@ -28,13 +28,13 @@
     <string name="accuracy_medium">Akurasi Sedang</string>
     <string name="accuracy_low">Perlu Kalibrasi</string>
     <string name="accuracy_unreliable">Interferensi Magnetik</string>
-    <string name="sensor_Simulation_banner">Mode Simulasi Interaktif (Sensor Fisik Tidak Terdeteksi)</string>
+    <string name="sensor_hardware_waiting_banner">Sensor Magnetik Fisik (Menunggu Deteksi Perangkat)</string>
     <string name="tilt_warning">Letakkan ponsel mendatar (sejajar permukaan) untuk akurasi kompas terbaik</string>
     <string name="haptic_toggle_label">Getar Saat Tepat Kiblat</string>
     <string name="true_north_toggle_label">Koreksi Kutub Utara Sejati (True North)</string>
     <string name="kaaba_coordinates_info">Ka\'bah (Masjidil Haram): 21.4225° LU, 39.8262° BT</string>
     <string name="cd_kaaba_hero">Ilustrasi Ka\'bah Masjidil Haram</string>
-    <string name="cd_compass_dial">Visualisasi Kompas Kiblat Interaktif</string>
+    <string name="cd_compass_dial">Visualisasi Kompas Kiblat Presisi Real-time</string>
     <string name="cd_location_button">Pilih atau perbarui lokasi</string>
     <string name="cd_haptic_button">Aktifkan atau nonaktifkan getaran saat menghadap kiblat</string>
     <string name="widget_title">Jadwal Sholat &amp; Arah Kiblat</string>
