@@ -92,7 +92,7 @@ jobs:
           keytool -list -v -keystore "$KEYSTORE_FILE" -storepass "$STORE_PASS" -alias "$KEY_ALIAS" | grep -E "SHA1:|SHA256:" || true
 
       - name: "6. Build Release APK & AAB (Bundle & Installable APK)"
-        run: ./gradlew assembleRelease bundleRelease -x lint -x lintVitalRelease --stacktrace
+        run: ./gradlew assembleRelease bundleRelease --stacktrace
 
       - name: "7. Siapkan Folder Artefak Rilis"
         run: |
