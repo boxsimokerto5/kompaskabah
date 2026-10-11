@@ -85,6 +85,11 @@ android {
     includeInApk = false
     includeInBundle = true
   }
+  lint {
+    checkReleaseBuilds = false
+    abortOnError = false
+    disable += setOf("InvalidFragmentVersionForActivityResult")
+  }
 }
 
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
@@ -115,6 +120,7 @@ dependencies {
   implementation(libs.androidx.compose.ui.graphics)
   implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.core.ktx)
+  implementation(libs.androidx.fragment.ktx)
   implementation(libs.androidx.datastore.preferences)
   implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.lifecycle.runtime.ktx)

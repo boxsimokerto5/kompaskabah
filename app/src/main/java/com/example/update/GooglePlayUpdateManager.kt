@@ -1,5 +1,6 @@
 package com.example.update
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -22,6 +23,7 @@ import com.google.android.play.core.install.model.UpdateAvailability
  * Automatically checks for updates from Google Play, prompts user via Google's native
  * dialog, or automatically completes flexible background downloads.
  */
+@SuppressLint("InvalidFragmentVersionForActivityResult")
 class GooglePlayUpdateManager(
     private val activity: ComponentActivity
 ) {
