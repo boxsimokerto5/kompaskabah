@@ -379,7 +379,6 @@ fun QiblaMainScreen(
                                 onToggleVibration = onToggleTasbihVibration,
                                 onNavigateBack = { onSelectTab(QiblaNavigationTab.COMPASS) },
                                 onOpenSettings = {
-                                    IronSourceAdManager.recordClick(context)
                                     showSettingsScreen = true
                                 }
                             )

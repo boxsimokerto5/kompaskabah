@@ -219,7 +219,6 @@ fun DigitalTasbihScreen(
                 currentTarget = tasbihState.targetCount,
                 onSelectTarget = { target ->
                     onSetTarget(target)
-                    IronSourceAdManager.recordClick(context)
                 }
             )
 
@@ -231,7 +230,6 @@ fun DigitalTasbihScreen(
                 onCount = {
                     onCountIncrement()
                     triggerFeedback()
-                    IronSourceAdManager.recordClick(context)
                 }
             )
 

@@ -33,8 +33,8 @@ object IronSourceAdManager {
     // Ad Unit ID / Placement for Banner
     const val BANNER_UNIT_ID = "dxk7ixq630tpjwzu"
 
-    // Interstitial frequency: every 6 clicks
-    const val INTERSTITIAL_CLICK_THRESHOLD = 6
+    // Interstitial frequency: every 15 clicks
+    const val INTERSTITIAL_CLICK_THRESHOLD = 15
 
     private val adScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
@@ -44,10 +44,37 @@ object IronSourceAdManager {
     val currentActivity: Activity?
         get() = currentActivityRef?.get()
 
+    // Persistent SharedPreferences configuration
+    private const val PREFS_NAME = "ironsource_ads_prefs"
+    private const val KEY_CLICK_COUNT = "key_interstitial_click_count"
+
     // Click counter for Interstitial ad trigger
     private var clickCount = 0
     private var pendingInterstitialShow = false
     private var isInterstitialLoading = false
+
+    private fun getPersistedClickCount(context: Context?): Int {
+        val ctx = context ?: currentActivityRef?.get() ?: return clickCount
+        return try {
+            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getInt(KEY_CLICK_COUNT, 0)
+        } catch (e: Exception) {
+            clickCount
+        }
+    }
+
+    private fun persistClickCount(context: Context?, count: Int) {
+        clickCount = count
+        val ctx = context ?: currentActivityRef?.get() ?: return
+        try {
+            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putInt(KEY_CLICK_COUNT, count)
+                .apply()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error persisting click count: ${e.message}")
+        }
+    }
 
     private val _isBannerLoaded = MutableStateFlow(false)
     val isBannerLoaded: StateFlow<Boolean> = _isBannerLoaded.asStateFlow()
@@ -65,6 +92,8 @@ object IronSourceAdManager {
 
     fun init(activity: Activity) {
         currentActivityRef = WeakReference(activity)
+        clickCount = getPersistedClickCount(activity)
+        Log.d(TAG, "IronSource init: current persisted click count = $clickCount / $INTERSTITIAL_CLICK_THRESHOLD")
         if (isInitialized) {
             Log.d(TAG, "IronSource already initialized")
             return
@@ -118,25 +147,28 @@ object IronSourceAdManager {
 
     /**
      * Records an interactive user click.
-     * When the counter reaches INTERSTITIAL_CLICK_THRESHOLD (6 clicks),
+     * When the counter reaches INTERSTITIAL_CLICK_THRESHOLD (15 clicks),
      * an interstitial ad is triggered. If not yet loaded, it will show immediately once ready.
+     * Click count is saved permanently across sessions via SharedPreferences.
      */
     fun recordClick(activity: Activity? = currentActivity) {
         val targetAct = activity ?: currentActivity
-        clickCount++
-        Log.d(TAG, "Click recorded: $clickCount / $INTERSTITIAL_CLICK_THRESHOLD")
+        val currentCount = getPersistedClickCount(targetAct)
+        val newCount = currentCount + 1
+        persistClickCount(targetAct, newCount)
+        Log.d(TAG, "Click recorded (persistent): $clickCount / $INTERSTITIAL_CLICK_THRESHOLD")
 
         if (clickCount >= INTERSTITIAL_CLICK_THRESHOLD) {
             if (IronSource.isInterstitialReady()) {
                 Log.d(TAG, "Threshold reached ($clickCount clicks), interstitial ready -> showing now")
-                clickCount = 0
+                persistClickCount(targetAct, 0)
                 pendingInterstitialShow = false
                 showInterstitialIfReady(targetAct)
             } else {
                 Log.d(TAG, "Threshold reached ($clickCount clicks), but interstitial not ready yet. Preloading...")
                 pendingInterstitialShow = true
                 loadInterstitial()
-                // Do not reset clickCount so user does not lose their progress until the ad is served
+                // Keep count until ad is actually served
             }
         }
     }
@@ -194,11 +226,11 @@ object IronSourceAdManager {
                 isInterstitialLoading = false
                 _isInterstitialReady.value = true
 
-                // If user already reached 6 clicks while the ad was loading, show it immediately now
+                // If user already reached threshold clicks while the ad was loading, show it immediately now
                 if (pendingInterstitialShow || clickCount >= INTERSTITIAL_CLICK_THRESHOLD) {
                     Log.d(TAG, "Fulfilling pending interstitial display now that ad is ready")
                     pendingInterstitialShow = false
-                    clickCount = 0
+                    persistClickCount(currentActivity, 0)
                     currentActivity?.let { act ->
                         act.runOnUiThread {
                             showInterstitialIfReady(act)
@@ -221,10 +253,12 @@ object IronSourceAdManager {
             override fun onAdOpened(adInfo: AdInfo?) {
                 Log.d(TAG, "Interstitial opened")
                 isInterstitialLoading = false
+                persistClickCount(currentActivity, 0)
             }
 
             override fun onAdShowSucceeded(adInfo: AdInfo?) {
                 Log.d(TAG, "Interstitial show succeeded")
+                persistClickCount(currentActivity, 0)
             }
 
             override fun onAdShowFailed(error: IronSourceError?, adInfo: AdInfo?) {
@@ -243,7 +277,7 @@ object IronSourceAdManager {
                 _isInterstitialReady.value = false
                 isInterstitialLoading = false
                 pendingInterstitialShow = false
-                clickCount = 0
+                persistClickCount(currentActivity, 0)
                 loadInterstitial()
             }
         })
