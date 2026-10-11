@@ -314,9 +314,9 @@ private fun AmalanMainMenu(
             }
         }
 
-        // 3. Grid of Luxury Golden Ornament Cards ("kotak emas ornamen mewah")
+        // 3. Dynamic Colorful Game-Banner Style Amalan Cards (Sesuai Desain Gambar 2)
         items(filteredCategories, key = { it.name }) { category ->
-            LuxuryGoldOrnamentCard(
+            ModernAmalanBannerCard(
                 category = category,
                 onClick = { onSelectCategory(category) }
             )
@@ -325,152 +325,291 @@ private fun AmalanMainMenu(
 }
 
 /**
- * Kartu Kotak Emas Ornamen Mewah (Luxury Gold Ornament Box)
+ * Konfigurasi tema visual kartu amalan bergaya banner interaktif dengan latar ilustrasi lanskap
+ */
+private data class AmalanBannerTheme(
+    val imageRes: Int,
+    val bgGradient: List<Color>,
+    val tagIcon: String,
+    val tagLabel: String,
+    val subHeadline: String,
+    val mainHeadline: String,
+    val featureHighlight: String,
+    val ctaLabel: String,
+    val ctaGradient: List<Color>,
+    val ctaTextColor: Color,
+    val watermarkEmblem: String
+)
+
+private fun getAmalanBannerTheme(category: AmalanCategory): AmalanBannerTheme {
+    return when (category) {
+        AmalanCategory.ASMAUL_HUSNA -> AmalanBannerTheme(
+            imageRes = R.drawable.img_asmaul_husna_stars_1791679969150,
+            bgGradient = listOf(Color(0xFF072B22), Color(0xFF0F5A47), Color(0xFF1B7F64)),
+            tagIcon = "💎",
+            tagLabel = "99 Sifat Keagungan",
+            subHeadline = "Kenali & Hafalkan Nama Allah",
+            mainHeadline = "99 ASMAUL HUSNA",
+            featureHighlight = "Teks Arab, Latin, Makna & Audio Murottal",
+            ctaLabel = "Dengarkan",
+            ctaGradient = listOf(Color(0xFF00E5FF), Color(0xFF00B0FF)),
+            ctaTextColor = Color(0xFF003644),
+            watermarkEmblem = "ﷲ"
+        )
+        AmalanCategory.TATA_CARA_WUDHU -> AmalanBannerTheme(
+            imageRes = R.drawable.img_oasis_wudhu_spring_1791679946849,
+            bgGradient = listOf(Color(0xFF06333D), Color(0xFF0B586B), Color(0xFF0E7D91)),
+            tagIcon = "💧",
+            tagLabel = "Syarat Sah Sholat",
+            subHeadline = "Bersuci Sesuai Tuntunan Sunnah",
+            mainHeadline = "PANDUAN WUDHU",
+            featureHighlight = "Urutan Rukun, Doa & Adab Bersuci",
+            ctaLabel = "Pelajari",
+            ctaGradient = listOf(Color(0xFF69F0AE), Color(0xFF00E676)),
+            ctaTextColor = Color(0xFF003D19),
+            watermarkEmblem = "۩"
+        )
+        AmalanCategory.TATA_CARA_SHOLAT -> AmalanBannerTheme(
+            imageRes = R.drawable.img_grand_mosque_blue_sky_1791642671931,
+            bgGradient = listOf(Color(0xFF0C1F3B), Color(0xFF162E56), Color(0xFF1F467D)),
+            tagIcon = "🕌",
+            tagLabel = "Tiang Utama Agama",
+            subHeadline = "Panduan Sholat Fardhu & Sunnah",
+            mainHeadline = "PANDUAN SHOLAT",
+            featureHighlight = "Gerakan Rukun, Bacaan Arab & Audio Suara",
+            ctaLabel = "Pelajari",
+            ctaGradient = listOf(Color(0xFFFFD54F), Color(0xFFFFB300)),
+            ctaTextColor = Color(0xFF3E2723),
+            watermarkEmblem = "۞"
+        )
+        AmalanCategory.YASIN -> AmalanBannerTheme(
+            imageRes = R.drawable.img_quran_yasin_rehal_1791679991654,
+            bgGradient = listOf(Color(0xFF3D1905), Color(0xFF6E320A), Color(0xFF9E4B0E)),
+            tagIcon = "📖",
+            tagLabel = "Jantung Al-Qur'an (83 Ayat)",
+            subHeadline = "Pemberi Syafaat & Ketenangan Jiwa",
+            mainHeadline = "SURAT YASIN",
+            featureHighlight = "Ayat demi Ayat, Latin & Terjemah Lengkap",
+            ctaLabel = "Mulai Baca",
+            ctaGradient = listOf(Color(0xFFFFF176), Color(0xFFFFEE58)),
+            ctaTextColor = Color(0xFF422B00),
+            watermarkEmblem = "📖"
+        )
+        AmalanCategory.TAHLIL -> AmalanBannerTheme(
+            imageRes = R.drawable.img_tasbih_lantern_tahlil_1791680016525,
+            bgGradient = listOf(Color(0xFF281814), Color(0xFF442B24), Color(0xFF634137)),
+            tagIcon = "📿",
+            tagLabel = "Dzikir & Doa Arwah",
+            subHeadline = "Susunan Majelis Tahlil Lengkap",
+            mainHeadline = "BACAAN TAHLIL",
+            featureHighlight = "Istighfar, Tasbih, Tahlil & Doa Arwah",
+            ctaLabel = "Buka Doa",
+            ctaGradient = listOf(Color(0xFFFFCC80), Color(0xFFFFA726)),
+            ctaTextColor = Color(0xFF3E2723),
+            watermarkEmblem = "📿"
+        )
+        AmalanCategory.DOA_SETELAH_SHOLAT -> AmalanBannerTheme(
+            imageRes = R.drawable.img_desert_prayer_hero_1791637232343,
+            bgGradient = listOf(Color(0xFF27094F), Color(0xFF42127E), Color(0xFF611A93)),
+            tagIcon = "🤲",
+            tagLabel = "Doa Mustajab Pilihan",
+            subHeadline = "Senjata Utama Orang Beriman",
+            mainHeadline = "DOA & WIRID SHOLAT",
+            featureHighlight = "Dzikir Rutin Ba'da Sholat & Doa Pilihan",
+            ctaLabel = "Amalkan",
+            ctaGradient = listOf(Color(0xFFEA80FC), Color(0xFFB388FF)),
+            ctaTextColor = Color(0xFF28064D),
+            watermarkEmblem = "🤲"
+        )
+        AmalanCategory.SHOLAWAT_LENGKAP -> AmalanBannerTheme(
+            imageRes = R.drawable.img_nabawi_green_dome_1791680082165,
+            bgGradient = listOf(Color(0xFF4A0629), Color(0xFF7B0D47), Color(0xFF9E1258)),
+            tagIcon = "✨",
+            tagLabel = "Raih Syafaat Rasulullah ﷺ",
+            subHeadline = "8 Sholawat Agung & Fadhilah",
+            mainHeadline = "SHOLAWAT NABI",
+            featureHighlight = "Nariyah, Tibbil Qulub, Jibril & Badar",
+            ctaLabel = "Lantunkan",
+            ctaGradient = listOf(Color(0xFFFF80AB), Color(0xFFFF4081)),
+            ctaTextColor = Color(0xFF4A0020),
+            watermarkEmblem = "✨"
+        )
+    }
+}
+
+/**
+ * Kartu Amalan Bergaya Banner Horizontal Interaktif dengan Latar Ilustrasi Gambar (Gambar 2 Style)
  */
 @Composable
-private fun LuxuryGoldOrnamentCard(
+private fun ModernAmalanBannerCard(
     category: AmalanCategory,
     onClick: () -> Unit
 ) {
+    val theme = remember(category) { getAmalanBannerTheme(category) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 7.dp)
             .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(20.dp),
-                ambientColor = Color(0xFFD4AF37),
-                spotColor = Color(0xFF8A5A00)
+                elevation = 6.dp,
+                shape = RoundedCornerShape(22.dp),
+                ambientColor = theme.bgGradient.first().copy(alpha = 0.5f),
+                spotColor = theme.bgGradient.last().copy(alpha = 0.6f)
             )
+            .clip(RoundedCornerShape(22.dp))
             .clickable { onClick() }
             .testTag("amalan_card_${category.name.lowercase()}"),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(22.dp),
         border = BorderStroke(
-            width = 1.6.dp,
-            brush = Brush.linearGradient(
-                colors = listOf(
-                    GoldGradientTop,
-                    GoldGradientMid,
-                    GoldGradientDark,
-                    GoldGradientTop
+            width = 1.2.dp,
+            brush = Brush.horizontalGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.35f),
+                    Color.White.copy(alpha = 0.15f),
+                    Color.White.copy(alpha = 0.30f)
                 )
             )
         ),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
-        )
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF261D0C),
-                            Color(0xFF1B1408),
-                            Color(0xFF130E05)
-                        )
-                    )
-                )
-                .padding(16.dp)
+                .height(130.dp)
         ) {
-            // Ornate Corner Flourish (Top Right)
-            Text(
-                text = "۩",
-                color = GoldGradientTop.copy(alpha = 0.18f),
-                fontSize = 44.sp,
-                modifier = Modifier.align(Alignment.TopEnd)
+            // 1. Gambar Ilustrasi Lanskap Tematik sebagai Background
+            Image(
+                painter = painterResource(id = theme.imageRes),
+                contentDescription = theme.mainHeadline,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Golden Geometric Ornament Avatar Box
-                Box(
-                    modifier = Modifier
-                        .size(62.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    Color(0xFF6B4E12),
-                                    Color(0xFF3D2A07),
-                                    Color(0xFF1A1203)
-                                )
-                            )
+            // 2. Lapisan Gradien Warna Protektif (Tebal di kiri untuk keterbacaan teks, transparan di kanan)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.horizontalGradient(
+                            0.0f to theme.bgGradient[0].copy(alpha = 0.94f),
+                            0.55f to theme.bgGradient[1].copy(alpha = 0.82f),
+                            1.0f to theme.bgGradient[2].copy(alpha = 0.40f)
                         )
-                        .border(
-                            width = 1.2.dp,
-                            brush = Brush.linearGradient(
-                                listOf(GoldGradientTop, GoldGradientMid, GoldGradientDark)
-                            ),
-                            shape = RoundedCornerShape(16.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = category.ornamentSymbol,
-                        fontSize = 28.sp,
-                        color = GoldGradientTop,
-                        textAlign = TextAlign.Center
                     )
-                }
+            )
 
-                Spacer(modifier = Modifier.width(14.dp))
+            // 3. Watermark Ornamen Kaligrafi Islami Halus
+            Text(
+                text = theme.watermarkEmblem,
+                color = Color.White.copy(alpha = 0.16f),
+                fontSize = 72.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 85.dp)
+            )
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
+            // 4. Konten Utama: Teks di Kiri & Tombol Aksi Kapsul di Kanan
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Kolom Kiri: Badge Tag + Sub-Headline + Judul Utama Bold Besar + Deskripsi Fitur
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 12.dp),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    // Small Pill Tag
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = Color.Black.copy(alpha = 0.28f),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.22f))
                     ) {
-                        Text(
-                            text = category.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFFF7DC),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        // Golden Pill Badge
-                        Surface(
-                            shape = RoundedCornerShape(50),
-                            color = GoldBadgeBg,
-                            border = BorderStroke(1.dp, GoldGradientMid.copy(alpha = 0.8f))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
                         ) {
+                            Text(text = theme.tagIcon, fontSize = 11.sp)
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = category.badge,
+                                text = theme.tagLabel,
+                                color = Color.White,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = GoldGradientTop,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(3.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = category.subtitle,
+                        text = theme.subHeadline,
                         style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.92f),
                         fontWeight = FontWeight.Medium,
-                        color = GoldGradientMid,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
 
                     Text(
-                        text = category.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.72f),
-                        fontSize = 11.5.sp,
-                        maxLines = 2,
+                        text = theme.mainHeadline,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.4.sp,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    Text(
+                        text = theme.featureHighlight,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.85f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                // Kolom Kanan: Tombol Kapsul Rounded 3D yang Sangat Kontras (Seperti "Mainkan" di Gambar 2)
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    shadowElevation = 5.dp,
+                    color = Color.Transparent,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .clickable { onClick() }
+                        .testTag("btn_action_${category.name.lowercase()}")
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .background(Brush.horizontalGradient(theme.ctaGradient))
+                            .border(
+                                width = 1.dp,
+                                color = Color.White.copy(alpha = 0.45f),
+                                shape = RoundedCornerShape(50)
+                            )
+                            .padding(horizontal = 18.dp, vertical = 11.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = theme.ctaLabel,
+                            color = theme.ctaTextColor,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            maxLines = 1,
+                            letterSpacing = 0.3.sp
+                        )
+                    }
                 }
             }
         }

@@ -19,7 +19,8 @@ data class NearbyMosqueItem(
     val latitude: Double,
     val longitude: Double,
     val distanceMeters: Double,
-    val bearingDegrees: Float
+    val bearingDegrees: Float,
+    val hasCustomName: Boolean = true
 ) {
     val formattedDistance: String
         get() = if (distanceMeters < 1000.0) {
@@ -34,7 +35,8 @@ data class NearbyMosqueItem(
 
 /**
  * Fetches real-time nearby mosques and prayer rooms (Masjid & Musholla) around the user's
- * live GPS coordinates using the OpenStreetMap Overpass API (`amenity=place_of_worship` + `religion=muslim`).
+ * live GPS coordinates using OpenStreetMap Overpass API without requiring paid API keys.
+ * Includes relation support, Indonesian name regex matching, and intelligent address heuristics.
  */
 class NearbyMosquesRepository {
 
@@ -45,23 +47,28 @@ class NearbyMosquesRepository {
 
     private val overpassEndpoints = listOf(
         "https://overpass-api.de/api/interpreter",
-        "https://overpass.kumi.systems/api/interpreter"
+        "https://overpass.kumi.systems/api/interpreter",
+        "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
     )
 
     suspend fun fetchNearbyMosques(
         userLat: Double,
         userLon: Double,
-        radiusMeters: Int = 4500
+        radiusMeters: Int = 6000
     ): Result<List<NearbyMosqueItem>> = withContext(Dispatchers.IO) {
         val query = """
-            [out:json][timeout:14];
+            [out:json][timeout:15];
             (
               node["amenity"="place_of_worship"]["religion"="muslim"](around:$radiusMeters,$userLat,$userLon);
               way["amenity"="place_of_worship"]["religion"="muslim"](around:$radiusMeters,$userLat,$userLon);
+              relation["amenity"="place_of_worship"]["religion"="muslim"](around:$radiusMeters,$userLat,$userLon);
               node["building"="mosque"](around:$radiusMeters,$userLat,$userLon);
               way["building"="mosque"](around:$radiusMeters,$userLat,$userLon);
+              relation["building"="mosque"](around:$radiusMeters,$userLat,$userLon);
+              node["name"~"Masjid|Musholla|Musala|Surau|Langgar", i](around:$radiusMeters,$userLat,$userLon);
+              way["name"~"Masjid|Musholla|Musala|Surau|Langgar", i](around:$radiusMeters,$userLat,$userLon);
             );
-            out center 35;
+            out center tags 60;
         """.trimIndent()
 
         var lastException: Exception? = null
@@ -100,7 +107,7 @@ class NearbyMosquesRepository {
         val root = JSONObject(jsonString)
         val elements = root.optJSONArray("elements") ?: return emptyList()
         val results = mutableListOf<NearbyMosqueItem>()
-        val seenNamesAndCoords = HashSet<String>()
+        val seenPositions = HashSet<String>()
 
         for (i in 0 until elements.length()) {
             val el = elements.optJSONObject(i) ?: continue
@@ -120,41 +127,61 @@ class NearbyMosquesRepository {
 
             if (lat.isNaN() || lon.isNaN()) continue
 
-            val tags = el.optJSONObject("tags")
-            val rawName = tags?.optString("name")?.trim()
-                ?: tags?.optString("name:id")?.trim()
-                ?: tags?.optString("alt_name")?.trim()
-                ?: ""
+            // Deduplicate identical places within ~40 meters
+            val coordKey = "${(lat * 2500).toInt()}_${(lon * 2500).toInt()}"
+            if (!seenPositions.add(coordKey)) continue
 
-            val displayName = if (rawName.isNotEmpty()) {
-                rawName
-            } else {
-                "Masjid / Musholla Setempat"
+            val tags = el.optJSONObject("tags")
+            val rawName = tags?.optString("name")?.trim().orEmpty().ifEmpty {
+                tags?.optString("name:id")?.trim().orEmpty().ifEmpty {
+                    tags?.optString("official_name")?.trim().orEmpty().ifEmpty {
+                        tags?.optString("alt_name")?.trim().orEmpty().ifEmpty {
+                            tags?.optString("short_name")?.trim().orEmpty().ifEmpty {
+                                tags?.optString("loc_name")?.trim().orEmpty()
+                            }
+                        }
+                    }
+                }
             }
 
-            // Deduplicate identical places
-            val dedupeKey = "${displayName.lowercase()}_${(lat * 1000).toInt()}_${(lon * 1000).toInt()}"
-            if (!seenNamesAndCoords.add(dedupeKey)) continue
+            val street = tags?.optString("addr:street")?.trim().orEmpty()
+            val suburb = tags?.optString("addr:suburb")?.trim().orEmpty().ifEmpty {
+                tags?.optString("addr:village")?.trim().orEmpty().ifEmpty {
+                    tags?.optString("addr:hamlet")?.trim().orEmpty().ifEmpty {
+                        tags?.optString("addr:city")?.trim().orEmpty()
+                    }
+                }
+            }
+            val operator = tags?.optString("operator")?.trim().orEmpty()
 
-            val lowerName = displayName.lowercase()
-            val category = if (lowerName.contains("mushola") ||
-                lowerName.contains("musholla") ||
-                lowerName.contains("musala") ||
-                lowerName.contains("langgar") ||
-                lowerName.contains("surau")
+            val hasCustomName = rawName.isNotBlank()
+
+            // Determine category
+            val combinedText = "$rawName ${tags?.optString("building").orEmpty()} ${tags?.optString("description").orEmpty()}".lowercase()
+            val category = if (combinedText.contains("mushola") ||
+                combinedText.contains("musholla") ||
+                combinedText.contains("musala") ||
+                combinedText.contains("langgar") ||
+                combinedText.contains("surau")
             ) {
                 "Musholla"
             } else {
                 "Masjid"
             }
 
-            val street = tags?.optString("addr:street")?.trim().orEmpty()
-            val suburb = tags?.optString("addr:suburb")?.trim()
-                ?: tags?.optString("addr:village")?.trim()
-                ?: tags?.optString("addr:city")?.trim()
-                ?: ""
-            val fullAddr = tags?.optString("addr:full")?.trim().orEmpty()
+            val displayName = if (hasCustomName) {
+                rawName
+            } else if (operator.isNotBlank()) {
+                "$category $operator"
+            } else if (street.isNotBlank()) {
+                "$category Jl. $street"
+            } else if (suburb.isNotBlank()) {
+                "$category Wilayah $suburb"
+            } else {
+                "$category Lingkungan Sekitar"
+            }
 
+            val fullAddr = tags?.optString("addr:full")?.trim().orEmpty()
             val addressLabel = when {
                 fullAddr.isNotEmpty() -> fullAddr
                 street.isNotEmpty() && suburb.isNotEmpty() -> "$street, $suburb"
@@ -185,17 +212,18 @@ class NearbyMosquesRepository {
                     latitude = lat,
                     longitude = lon,
                     distanceMeters = distMeters,
-                    bearingDegrees = bearing
+                    bearingDegrees = bearing,
+                    hasCustomName = hasCustomName
                 )
             )
         }
 
-        // Prioritize named mosques and sort strictly by shortest distance from user's GPS
+        // Prioritize named mosques first sorted by proximity, followed by unnamed/inferred ones
         return results
             .sortedWith(
-                compareBy<NearbyMosqueItem> { it.distanceMeters }
-                    .thenBy { it.name == "Masjid / Musholla Setempat" }
+                compareByDescending<NearbyMosqueItem> { it.hasCustomName }
+                    .thenBy { it.distanceMeters }
             )
-            .take(25)
+            .take(35)
     }
 }

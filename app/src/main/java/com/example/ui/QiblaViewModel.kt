@@ -488,7 +488,7 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
                         nearbyMosques = list,
                         isLoadingMosques = false,
                         mosquesErrorMessage = if (list.isEmpty()) {
-                            "Tidak ditemukan data masjid dalam radius 4.5 km dari titik ini."
+                            "Tidak ditemukan data masjid dalam radius 6 km dari titik ini."
                         } else {
                             null
                         }

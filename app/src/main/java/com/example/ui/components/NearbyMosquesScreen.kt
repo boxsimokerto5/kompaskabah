@@ -7,6 +7,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,12 +40,19 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -69,6 +77,13 @@ import com.example.ui.theme.DeepEmeraldPrimary
 import com.example.ui.theme.DeepGoldAccent
 import com.example.ui.theme.MeccaGold
 
+enum class MosqueFilter(val label: String) {
+    ALL("Semua"),
+    ONLY_MASJID("Masjid"),
+    ONLY_MUSHOLLA("Musholla"),
+    NAMED_ONLY("Nama Terdaftar")
+}
+
 /**
  * Dedicated "Masjid Terdekat" screen featuring:
  * 1. Full-bleed left-to-right gradient hero banner of Santri walking on a garden pathway in front of a Mosque under a bright blue sky.
@@ -85,6 +100,17 @@ fun NearbyMosquesScreen(
     val context = LocalContext.current
     val scrollState = rememberScrollState()
     val pageBackgroundColor = MaterialTheme.colorScheme.background
+
+    var currentFilter by rememberSaveable { mutableStateOf(MosqueFilter.ALL) }
+
+    val filteredMosques = remember(uiState.nearbyMosques, currentFilter) {
+        when (currentFilter) {
+            MosqueFilter.ALL -> uiState.nearbyMosques
+            MosqueFilter.ONLY_MASJID -> uiState.nearbyMosques.filter { it.categoryLabel == "Masjid" }
+            MosqueFilter.ONLY_MUSHOLLA -> uiState.nearbyMosques.filter { it.categoryLabel == "Musholla" }
+            MosqueFilter.NAMED_ONLY -> uiState.nearbyMosques.filter { it.hasCustomName }
+        }
+    }
 
     Column(
         modifier = modifier
@@ -231,7 +257,11 @@ fun NearbyMosquesScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Bottom
                 ) {
-                    Column {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 10.dp)
+                    ) {
                         Text(
                             text = "PENCARIAN OTOMATIS GPS",
                             style = MaterialTheme.typography.labelSmall,
@@ -264,10 +294,12 @@ fun NearbyMosquesScreen(
                             )
                         ) {
                             Text(
-                                text = "${uiState.nearbyMosques.size} Ditemukan",
+                                text = "${uiState.nearbyMosques.size} Lokasi",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = AlignedEmerald,
                                 fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false,
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                             )
                         }
@@ -276,7 +308,7 @@ fun NearbyMosquesScreen(
             }
         }
 
-        // 2. Content Body: Quick Google Maps Radar Action + Sorted Nearby Mosques List
+        // 2. Content Body: Quick Google Maps Radar Action + Filter Chips + Sorted Mosques List
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -303,7 +335,7 @@ fun NearbyMosquesScreen(
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
                         .weight(1f)
-                        .height(46.dp)
+                        .height(48.dp)
                         .testTag("open_google_maps_mosques_button")
                 ) {
                     Icon(
@@ -311,11 +343,12 @@ fun NearbyMosquesScreen(
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Lihat di Google Maps",
+                        text = "Buka Google Maps",
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1
                     )
                 }
 
@@ -323,7 +356,7 @@ fun NearbyMosquesScreen(
                     onClick = onRefreshGpsAndMosques,
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
-                        .height(46.dp)
+                        .height(48.dp)
                         .testTag("refresh_mosques_list_button")
                 ) {
                     Icon(
@@ -339,7 +372,43 @@ fun NearbyMosquesScreen(
                 }
             }
 
-            // Loading / Empty / List States
+            // Interactive Filter Chips Row
+            if (uiState.nearbyMosques.isNotEmpty()) {
+                val chipScrollState = rememberScrollState()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(chipScrollState),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    MosqueFilter.values().forEach { filter ->
+                        val isSelected = currentFilter == filter
+                        val count = when (filter) {
+                            MosqueFilter.ALL -> uiState.nearbyMosques.size
+                            MosqueFilter.ONLY_MASJID -> uiState.nearbyMosques.count { it.categoryLabel == "Masjid" }
+                            MosqueFilter.ONLY_MUSHOLLA -> uiState.nearbyMosques.count { it.categoryLabel == "Musholla" }
+                            MosqueFilter.NAMED_ONLY -> uiState.nearbyMosques.count { it.hasCustomName }
+                        }
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { currentFilter = filter },
+                            label = {
+                                Text(
+                                    text = "${filter.label} ($count)",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Loading / Empty / Filtered List States
             when {
                 uiState.isLoadingMosques && uiState.nearbyMosques.isEmpty() -> {
                     Card(
@@ -416,8 +485,51 @@ fun NearbyMosquesScreen(
                     }
                 }
 
+                filteredMosques.isEmpty() -> {
+                    Card(
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
+                                shape = RoundedCornerShape(20.dp)
+                            )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mosque,
+                                contentDescription = null,
+                                tint = DeepGoldAccent,
+                                modifier = Modifier.size(36.dp)
+                            )
+                            Text(
+                                text = "Tidak ada tempat ibadah yang cocok dengan filter saat ini.",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = "Silakan pilih filter 'Semua' untuk melihat seluruh tempat ibadah terdekat, atau gunakan tombol Buka Google Maps.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+
                 else -> {
-                    uiState.nearbyMosques.forEachIndexed { index, mosque ->
+                    filteredMosques.forEachIndexed { index, mosque ->
                         NearbyMosqueCard(
                             mosque = mosque,
                             isClosest = index == 0,
@@ -501,8 +613,11 @@ private fun NearbyMosqueCard(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
                         Surface(
                             shape = RoundedCornerShape(50),
                             color = if (isClosest) {
@@ -516,8 +631,25 @@ private fun NearbyMosqueCard(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = if (isClosest) AlignedEmerald else MaterialTheme.colorScheme.secondary,
                                 fontWeight = FontWeight.Bold,
+                                maxLines = 1,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                             )
+                        }
+
+                        if (mosque.hasCustomName) {
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = DeepGoldAccent.copy(alpha = 0.14f)
+                            ) {
+                                Text(
+                                    text = "Terdaftar",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = DeepGoldAccent,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
                         }
                     }
 
