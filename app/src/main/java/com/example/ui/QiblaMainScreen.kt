@@ -45,6 +45,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -53,6 +54,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Adjust
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CompassCalibration
 import androidx.compose.material.icons.filled.Explore
@@ -108,11 +111,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.R
+import com.example.ads.IronSourceAdManager
 import com.example.ads.IronSourceBannerAd
 import com.example.data.MuezzinVoiceOption
 import com.example.domain.QiblaCalculator
+import com.example.domain.tasbih.TasbihBeadTheme
 import com.example.service.AdhanPlaybackState
 import com.example.ui.components.AmalanScreen
+import com.example.ui.components.DigitalTasbihScreen
+import com.example.ui.components.IslamicCalendarScreen
 import com.example.ui.components.NearbyMosquesScreen
 import com.example.ui.components.PrayerTimesScreen
 import com.example.ui.components.SettingsInfoScreen
@@ -148,14 +155,24 @@ fun QiblaMainScreen(
     onTogglePrayerAdhan: (String) -> Unit,
     onTestOrStopAdhan: (String) -> Unit,
     onStopAdhan: () -> Unit,
-    onRefreshMosques: () -> Unit = {}
+    onRefreshMosques: () -> Unit = {},
+    onSelectLanguage: (String) -> Unit = {},
+    onIncrementTasbih: () -> Unit = {},
+    onResetTasbih: () -> Unit = {},
+    onSetTasbihTarget: (Int) -> Unit = {},
+    onSelectTasbihDzikir: (Int) -> Unit = {},
+    onSelectTasbihBeadTheme: (TasbihBeadTheme) -> Unit = {},
+    onToggleTasbihSound: (Boolean) -> Unit = {},
+    onToggleTasbihVibration: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     var showSettingsScreen by remember { mutableStateOf(false) }
 
     if (showSettingsScreen) {
         SettingsInfoScreen(
-            onBack = { showSettingsScreen = false }
+            onBack = { showSettingsScreen = false },
+            currentLanguageCode = uiState.appLanguageCode,
+            onLanguageChange = onSelectLanguage
         )
         return
     }
@@ -291,7 +308,10 @@ fun QiblaMainScreen(
                                 isWideScreen = isWideScreen,
                                 onRequestGpsClick = triggerGpsRefreshOrRequest,
                                 onToggleHaptic = { onToggleHaptic(!uiState.hapticFeedbackEnabled) },
-                                onOpenSettings = { showSettingsScreen = true },
+                                onOpenSettings = {
+                                    IronSourceAdManager.recordClick(context)
+                                    showSettingsScreen = true
+                                },
                                 onManualRotate = onManualRotate,
                                 onSnapToQibla = onSnapToQibla,
                                 onResumeSensor = onResumeSensor,
@@ -300,6 +320,9 @@ fun QiblaMainScreen(
                                 },
                                 onOpenCalibration = {
                                     onSelectTab(QiblaNavigationTab.SENSOR_DIAGNOSTICS)
+                                },
+                                onOpenTasbih = {
+                                    onSelectTab(QiblaNavigationTab.TASBIH)
                                 }
                             )
                         }
@@ -326,14 +349,47 @@ fun QiblaMainScreen(
                                 onSelectMuezzin = onSelectMuezzin,
                                 onTogglePrayerAdhan = onTogglePrayerAdhan,
                                 onTestOrStopAdhan = onTestOrStopAdhan,
-                                onOpenSettings = { showSettingsScreen = true }
+                                onOpenSettings = {
+                                    IronSourceAdManager.recordClick(context)
+                                    showSettingsScreen = true
+                                }
+                            )
+                        }
+
+                        QiblaNavigationTab.ISLAMIC_CALENDAR -> {
+                            IslamicCalendarScreen(
+                                uiState = uiState,
+                                onToggleHaptic = { onToggleHaptic(!uiState.hapticFeedbackEnabled) },
+                                onOpenSettings = {
+                                    IronSourceAdManager.recordClick(context)
+                                    showSettingsScreen = true
+                                }
+                            )
+                        }
+
+                        QiblaNavigationTab.TASBIH -> {
+                            DigitalTasbihScreen(
+                                tasbihState = uiState.tasbihState,
+                                onCountIncrement = onIncrementTasbih,
+                                onCountReset = onResetTasbih,
+                                onSelectDzikirPreset = onSelectTasbihDzikir,
+                                onSetTarget = onSetTasbihTarget,
+                                onSelectBeadTheme = onSelectTasbihBeadTheme,
+                                onToggleSound = onToggleTasbihSound,
+                                onToggleVibration = onToggleTasbihVibration,
+                                onNavigateBack = { onSelectTab(QiblaNavigationTab.COMPASS) },
+                                onOpenSettings = {
+                                    IronSourceAdManager.recordClick(context)
+                                    showSettingsScreen = true
+                                }
                             )
                         }
 
                         QiblaNavigationTab.AMALAN -> {
                             AmalanScreen(
                                 onNavigateBackToCompass = { onSelectTab(QiblaNavigationTab.COMPASS) },
-                                onOpenSettings = { showSettingsScreen = true }
+                                onOpenSettings = { showSettingsScreen = true },
+                                onOpenTasbih = { onSelectTab(QiblaNavigationTab.TASBIH) }
                             )
                         }
 
@@ -580,7 +636,8 @@ private fun CompassDashboardContent(
     onSnapToQibla: () -> Unit,
     onResumeSensor: () -> Unit,
     onSwitchToArrowMode: () -> Unit,
-    onOpenCalibration: () -> Unit = {}
+    onOpenCalibration: () -> Unit = {},
+    onOpenTasbih: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
 
@@ -629,7 +686,8 @@ private fun CompassDashboardContent(
                     CompassSensorStatusAndActionBar(
                         uiState = uiState,
                         onSwitchToArrowMode = onSwitchToArrowMode,
-                        onOpenCalibration = onOpenCalibration
+                        onOpenCalibration = onOpenCalibration,
+                        onOpenTasbih = onOpenTasbih
                     )
                 }
             }
@@ -676,6 +734,7 @@ private fun CompassDashboardContent(
                     uiState = uiState,
                     onSwitchToArrowMode = onSwitchToArrowMode,
                     onOpenCalibration = onOpenCalibration,
+                    onOpenTasbih = onOpenTasbih,
                     modifier = Modifier.widthIn(max = 560.dp)
                 )
 
@@ -1022,6 +1081,7 @@ private fun CompassSensorStatusAndActionBar(
     uiState: QiblaUiState,
     onSwitchToArrowMode: () -> Unit,
     onOpenCalibration: () -> Unit,
+    onOpenTasbih: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse_transition")
@@ -1163,6 +1223,37 @@ private fun CompassSensorStatusAndActionBar(
                 )
             }
         }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // 3. Quick Action Button for Digital Tasbih
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = DeepEmeraldPrimary.copy(alpha = 0.12f),
+            modifier = Modifier
+                .border(
+                    width = 1.dp,
+                    color = DeepEmeraldPrimary.copy(alpha = 0.45f),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .clip(RoundedCornerShape(16.dp))
+                .clickable { onOpenTasbih() }
+                .testTag("compass_open_tasbih_btn")
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Text(text = "📿", fontSize = 13.sp)
+                Text(
+                    text = "Tasbih",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = DeepEmeraldPrimary
+                )
+            }
+        }
     }
 }
 
@@ -1189,8 +1280,9 @@ private fun ElegantQiblaBottomMenuBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceAround,
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 6.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 CircularNavMenuItem(
@@ -1215,6 +1307,22 @@ private fun ElegantQiblaBottomMenuBar(
                     isSelected = selectedTab == QiblaNavigationTab.PRAYER_TIMES,
                     onClick = { onSelectTab(QiblaNavigationTab.PRAYER_TIMES) },
                     testTag = "nav_tab_prayer"
+                )
+
+                CircularNavMenuItem(
+                    label = stringResource(id = R.string.tab_calendar),
+                    icon = Icons.Default.CalendarMonth,
+                    isSelected = selectedTab == QiblaNavigationTab.ISLAMIC_CALENDAR,
+                    onClick = { onSelectTab(QiblaNavigationTab.ISLAMIC_CALENDAR) },
+                    testTag = "nav_tab_calendar"
+                )
+
+                CircularNavMenuItem(
+                    label = stringResource(id = R.string.tab_tasbih),
+                    icon = Icons.Default.Adjust,
+                    isSelected = selectedTab == QiblaNavigationTab.TASBIH,
+                    onClick = { onSelectTab(QiblaNavigationTab.TASBIH) },
+                    testTag = "nav_tab_tasbih"
                 )
 
                 CircularNavMenuItem(
@@ -1280,15 +1388,15 @@ private fun CircularNavMenuItem(
                 indication = ripple(bounded = true),
                 onClick = onClick
             )
-            .padding(horizontal = 4.dp, vertical = 3.dp)
+            .padding(horizontal = 2.dp, vertical = 2.dp)
             .testTag(testTag)
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(37.dp)
                 .then(
                     if (isSelected) {
-                        Modifier.shadow(elevation = 4.dp, shape = CircleShape)
+                        Modifier.shadow(elevation = 3.dp, shape = CircleShape)
                     } else {
                         Modifier
                     }
@@ -1300,15 +1408,15 @@ private fun CircularNavMenuItem(
                 imageVector = icon,
                 contentDescription = label,
                 tint = iconTint,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(19.dp)
             )
         }
 
-        Spacer(modifier = Modifier.height(3.dp))
+        Spacer(modifier = Modifier.height(2.dp))
 
         Text(
             text = label,
-            fontSize = 10.sp,
+            fontSize = 9.5.sp,
             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
             color = labelColor,
             maxLines = 1
@@ -1348,6 +1456,22 @@ private fun QiblaSideNavigationRail(
             icon = { Icon(Icons.Default.AccessTime, contentDescription = null) },
             label = { Text(stringResource(id = R.string.tab_prayer)) },
             modifier = Modifier.testTag("rail_tab_prayer")
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        NavigationRailItem(
+            selected = selectedTab == QiblaNavigationTab.ISLAMIC_CALENDAR,
+            onClick = { onSelectTab(QiblaNavigationTab.ISLAMIC_CALENDAR) },
+            icon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
+            label = { Text(stringResource(id = R.string.tab_calendar)) },
+            modifier = Modifier.testTag("rail_tab_calendar")
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        NavigationRailItem(
+            selected = selectedTab == QiblaNavigationTab.TASBIH,
+            onClick = { onSelectTab(QiblaNavigationTab.TASBIH) },
+            icon = { Icon(Icons.Default.Adjust, contentDescription = null) },
+            label = { Text(stringResource(id = R.string.tab_tasbih)) },
+            modifier = Modifier.testTag("rail_tab_tasbih")
         )
         Spacer(modifier = Modifier.height(12.dp))
         NavigationRailItem(

@@ -1,0 +1,86 @@
+<resources>
+    <string name="app_name">بوصلة القبلة</string>
+    <string name="app_subtitle">تحديد اتجاه الكعبة بدقة فائقة</string>
+    <string name="tab_compass">البوصلة</string>
+    <string name="tab_arrow">السهم</string>
+    <string name="tab_prayer">مواقيت الصلاة</string>
+    <string name="tab_calendar">التقويم</string>
+    <string name="tab_tasbih">تسبيح</string>
+    <string name="tab_amalan">الأعمال والأذكار</string>
+    <string name="tab_mosques">المساجد</string>
+    <string name="tab_sensor">المعايرة</string>
+    <string name="qibla_aligned">مواجه للقبلة بدقة</string>
+    <string name="qibla_turn_right">استدر يميناً %1$d°</string>
+    <string name="qibla_turn_left">استدر يساراً %1$d°</string>
+    <string name="qibla_almost_aligned">قريب من القبلة (بقي %1$d°)</string>
+    <string name="label_qibla_bearing">زاوية القبلة</string>
+    <string name="label_current_heading">اتجاه الهاتف</string>
+    <string name="label_distance_kaaba">المسافة إلى الكعبة</string>
+    <string name="label_magnetic_declination">الانحراف المغناطيسي</string>
+    <string name="label_magnetic_field">المجال المغناطيسي</string>
+    <string name="label_device_tilt">ميل الهاتف</string>
+    <string name="status_gps_live">نظام GPS المباشر نشط</string>
+    <string name="status_gps_searching">جاري البحث عن إشارة GPS…</string>
+    <string name="status_manual_city">الموقع: %1$s</string>
+    <string name="btn_grant_gps">تفعيل دقة GPS</string>
+    <string name="btn_refresh_gps">تحديث GPS</string>
+    <string name="btn_select_city">اختر المدينة</string>
+    <string name="btn_calibrate_guide">دليل المعايرة</string>
+    <string name="accuracy_high">دقة عالية</string>
+    <string name="accuracy_medium">دقة متوسطة</string>
+    <string name="accuracy_low">يحتاج إلى معايرة</string>
+    <string name="accuracy_unreliable">تداخل مغناطيسي</string>
+    <string name="sensor_hardware_waiting_banner">المستشعر المغناطيسي (في انتظار الكشف)</string>
+    <string name="tilt_warning">ضع الهاتف أفقياً على سطح مستوٍ لأفضل دقة للبوصلة</string>
+    <string name="haptic_toggle_label">اهتزاز عند محاذاة القبلة</string>
+    <string name="true_north_toggle_label">تصحيح الشمال الحقيقي</string>
+    <string name="kaaba_coordinates_info">الكعبة المشرفة: 21.4225° شمالاً، 39.8262° شرقاً</string>
+    <string name="cd_kaaba_hero">صورة الكعبة المشرفة في المسجد الحرام</string>
+    <string name="cd_compass_dial">بوصلة القبلة الدقيقة في الوقت الفعلي</string>
+    <string name="cd_location_button">تحديد الموقع أو تحديثه</string>
+    <string name="cd_haptic_button">تفعيل أو إيقاف الاهتزاز عند مواجهة القبلة</string>
+    <string name="widget_title">مواقيت الصلاة والقبلة</string>
+    <string name="widget_description">عرض موعد الصلاة القادمة والعد التنازلي واتجاه القبلة على الشاشة الرئيسية.</string>
+
+    <!-- Language & Localization -->
+    <string name="language_setting_title">لغة التطبيق</string>
+    <string name="language_setting_subtitle">اختر لغة واجهة التطبيق</string>
+    <string name="language_dialog_title">اختر اللغة</string>
+    <string name="language_dialog_subtitle">اختر اللغة المناسبة لراحتك في الاستخدام</string>
+    <string name="language_onboarding_welcome">أهلاً وسهلاً</string>
+    <string name="language_onboarding_title">اختر لغة التطبيق</string>
+    <string name="language_onboarding_desc">يرجى اختيار لغتك المفضلة لتجربة استخدام مريحة. يمكنك تغيير اللغة لاحقاً في أي وقت من الإعدادات.</string>
+    <string name="language_btn_save">تطبيق اللغة</string>
+    <string name="language_btn_continue">حفظ ومتابعة</string>
+    <string name="language_btn_cancel">إلغاء</string>
+    <string name="language_toast_applied">تم تغيير اللغة إلى %1$s</string>
+
+    <!-- Settings & Info Screen -->
+    <string name="settings_title">الإعدادات والمعلومات</string>
+    <string name="settings_subtitle">بوصلة القبلة ومواقيت الصلاة</string>
+    <string name="settings_rate_title">تقييم التطبيق</string>
+    <string name="settings_rate_desc">دعمكم بتقييم 5 نجوم يدعم استمرار تطوير التطبيق وتحديثاته</string>
+    <string name="settings_rate_btn">تقييم على متجر جوجل بلاي</string>
+    <string name="settings_share_title">مشاركة التطبيق</string>
+    <string name="settings_share_desc">شارك التطبيق مع أصدقائك وعائلتك لمعرفة القبلة ومواقيت الصلاة</string>
+    <string name="settings_share_btn">مشاركة عبر واتساب / وسائل التواصل</string>
+    <string name="settings_about_title">حول التطبيق</string>
+    <string name="settings_about_desc">تفاصيل الميزات والخوارزميات ومعلومات المطور</string>
+    <string name="settings_dark_mode">الوضع الداكن</string>
+    <string name="settings_adhan_auto">الأذان التلقائي</string>
+    <string name="settings_muezzin_title">اختيار صوت المؤذن</string>
+
+    <!-- Prayer Times -->
+    <string name="prayer_fajr">الفجر</string>
+    <string name="prayer_sunrise">الشروق</string>
+    <string name="prayer_dhuhr">الظهر</string>
+    <string name="prayer_asr">العصر</string>
+    <string name="prayer_maghrib">المغرب</string>
+    <string name="prayer_isha">العشاء</string>
+    <string name="prayer_imsak">الإمساك</string>
+
+    <!-- Common Actions -->
+    <string name="action_back">رجوع</string>
+    <string name="action_close">إغلاق</string>
+    <string name="action_search">بحث</string>
+</resources>

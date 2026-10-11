@@ -4,6 +4,8 @@
     <string name="tab_compass">Kompas</string>
     <string name="tab_arrow">Anak panah</string>
     <string name="tab_prayer">Waktu Sholat</string>
+    <string name="tab_calendar">Kalender</string>
+    <string name="tab_tasbih">Tasbih</string>
     <string name="tab_amalan">Amalan</string>
     <string name="tab_mosques">Masjid</string>
     <string name="tab_sensor">Kalibrasi</string>
@@ -39,4 +41,46 @@
     <string name="cd_haptic_button">Aktifkan atau nonaktifkan getaran saat menghadap kiblat</string>
     <string name="widget_title">Jadwal Sholat &amp; Arah Kiblat</string>
     <string name="widget_description">Menampilkan jadwal waktu sholat berikutnya, hitung mundur, dan ringkasan sudut arah Kiblat di layar utama.</string>
+
+    <!-- Language & Localization -->
+    <string name="language_setting_title">Bahasa Aplikasi</string>
+    <string name="language_setting_subtitle">Pilih bahasa tampilan antarmuka</string>
+    <string name="language_dialog_title">Pilih Bahasa</string>
+    <string name="language_dialog_subtitle">Pilih bahasa yang nyaman untuk Anda gunakan</string>
+    <string name="language_onboarding_welcome">Assalamu\'alaikum</string>
+    <string name="language_onboarding_title">Pilih Bahasa Aplikasi</string>
+    <string name="language_onboarding_desc">Silakan tentukan bahasa tampilan utama untuk kenyamanan ibadah Anda. Pilihan ini dapat diubah kapan saja di menu Pengaturan.</string>
+    <string name="language_btn_save">Terapkan Bahasa</string>
+    <string name="language_btn_continue">Simpan &amp; Lanjutkan</string>
+    <string name="language_btn_cancel">Batal</string>
+    <string name="language_toast_applied">Bahasa berhasil diubah ke %1$s</string>
+
+    <!-- Settings & Info Screen -->
+    <string name="settings_title">Pengaturan &amp; Info</string>
+    <string name="settings_subtitle">Kompas Kiblat &amp; Jadwal Sholat</string>
+    <string name="settings_rate_title">Beri Rating Aplikasi</string>
+    <string name="settings_rate_desc">Dukungan bintang 5 Anda sangat berarti bagi pengembangan aplikasi ini</string>
+    <string name="settings_rate_btn">Beri Rating di Play Store</string>
+    <string name="settings_share_title">Bagikan Aplikasi</string>
+    <string name="settings_share_desc">Ajak sanak saudara dan teman menemukan arah Kiblat serta jadwal sholat</string>
+    <string name="settings_share_btn">Bagikan ke WhatsApp / Media Sosial</string>
+    <string name="settings_about_title">Tentang Aplikasi</string>
+    <string name="settings_about_desc">Informasi fitur, algoritma, dan pengembang</string>
+    <string name="settings_dark_mode">Tema Gelap (Dark Mode)</string>
+    <string name="settings_adhan_auto">Adzan Otomatis</string>
+    <string name="settings_muezzin_title">Pilihan Suara Muadzin</string>
+
+    <!-- Prayer Times -->
+    <string name="prayer_fajr">Subuh</string>
+    <string name="prayer_sunrise">Terbit</string>
+    <string name="prayer_dhuhr">Dzuhur</string>
+    <string name="prayer_asr">Ashar</string>
+    <string name="prayer_maghrib">Maghrib</string>
+    <string name="prayer_isha">Isya</string>
+    <string name="prayer_imsak">Imsak</string>
+
+    <!-- Common Actions -->
+    <string name="action_back">Kembali</string>
+    <string name="action_close">Tutup</string>
+    <string name="action_search">Cari</string>
 </resources>

@@ -7,6 +7,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
+import com.example.data.AppLanguageManager
 import com.example.data.MuezzinVoiceOption
 import com.example.service.AdhanAlarmReceiver
 import com.example.service.AdhanAlarmScheduler
@@ -26,10 +27,28 @@ import org.robolectric.annotation.Config
 class ExampleRobolectricTest {
 
     @Test
-    fun `read string from context`() {
+    @Config(qualifiers = "id")
+    fun `read string from context in Indonesian`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val appName = context.getString(R.string.app_name)
         assertEquals("Kompas Kiblat", appName)
+    }
+
+    @Test
+    @Config(qualifiers = "en")
+    fun `read string from context in English`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val appName = context.getString(R.string.app_name)
+        assertEquals("Qibla Compass", appName)
+    }
+
+    @Test
+    fun `AppLanguageManager returns supported languages and persists preference`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        assertTrue(AppLanguageManager.supportedLanguages.isNotEmpty())
+        AppLanguageManager.setLanguage(context, AppLanguageManager.LANG_EN)
+        assertEquals(AppLanguageManager.LANG_EN, AppLanguageManager.getCurrentLanguage(context))
+        assertTrue(AppLanguageManager.isLanguageOnboardingCompleted(context))
     }
 
     @Test

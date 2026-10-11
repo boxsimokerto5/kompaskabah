@@ -3,6 +3,7 @@ package com.example.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.AppLanguageManager
 import com.example.data.CompassSensorManager
 import com.example.data.CompassSensorReading
 import com.example.data.LocationTracker
@@ -12,8 +13,12 @@ import com.example.data.NearbyMosquesRepository
 import com.example.data.QiblaPreferencesRepository
 import com.example.data.SensorAccuracyLevel
 import com.example.data.StoredQiblaPreferences
+import com.example.data.TasbihPreferencesManager
 import com.example.domain.PrayerTimeItem
 import com.example.domain.QiblaCalculator
+import com.example.domain.tasbih.TasbihBeadTheme
+import com.example.domain.tasbih.TasbihPresets
+import com.example.domain.tasbih.TasbihState
 import com.example.service.AdhanAlarmScheduler
 import com.example.service.AdhanForegroundService
 import com.example.service.AdhanNotificationHelper
@@ -35,6 +40,8 @@ enum class QiblaNavigationTab {
     COMPASS,
     ARROW_POINTER,
     PRAYER_TIMES,
+    ISLAMIC_CALENDAR,
+    TASBIH,
     AMALAN,
     NEARBY_MOSQUES,
     SENSOR_DIAGNOSTICS
@@ -74,6 +81,8 @@ data class QiblaUiState(
     val useTrueNorthCorrection: Boolean = true,
     val hapticFeedbackEnabled: Boolean = true,
     val darkThemeEnabled: Boolean = false,
+    val appLanguageCode: String = AppLanguageManager.LANG_ID,
+    val isLanguageOnboardingCompleted: Boolean = true,
 
     // Adhan & Prayer Schedule Settings
     val adhanAutoEnabled: Boolean = true,
@@ -92,7 +101,10 @@ data class QiblaUiState(
     // Nearby Mosques (Automatic GPS Search)
     val nearbyMosques: List<NearbyMosqueItem> = emptyList(),
     val isLoadingMosques: Boolean = false,
-    val mosquesErrorMessage: String? = null
+    val mosquesErrorMessage: String? = null,
+
+    // Digital Tasbih State
+    val tasbihState: TasbihState = TasbihState()
 ) {
     val angleDeltaToQiblaDeg: Float
         get() = QiblaCalculator.shortestAngleDelta(effectiveDeviceHeadingDeg, qiblaBearingTrueNorthDeg)
@@ -117,6 +129,7 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
     private val locationTracker = LocationTracker(application)
     private val preferencesRepository = QiblaPreferencesRepository(application)
     private val nearbyMosquesRepository = NearbyMosquesRepository()
+    private val tasbihPrefsManager = TasbihPreferencesManager(application)
 
     private val _uiState = MutableStateFlow(QiblaUiState())
     val uiState: StateFlow<QiblaUiState> = _uiState.asStateFlow()
@@ -129,11 +142,17 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
         AdhanNotificationHelper.ensureNotificationChannel(appContext)
         val initialPerm = locationTracker.hasLocationPermission()
         val notifPerm = AdhanNotificationHelper.hasNotificationPermission(appContext)
+        val initialLang = AppLanguageManager.getCurrentLanguage(appContext)
+        val onboardingDone = AppLanguageManager.isLanguageOnboardingCompleted(appContext)
+        val initialTasbih = tasbihPrefsManager.loadTasbihState()
         _uiState.update {
             it.copy(
                 hasLocationPermission = initialPerm,
                 hasNotificationPermission = notifPerm,
-                isHardwareSensorAvailable = compassSensorManager.hasHardwareCompass
+                isHardwareSensorAvailable = compassSensorManager.hasHardwareCompass,
+                appLanguageCode = initialLang,
+                isLanguageOnboardingCompleted = onboardingDone,
+                tasbihState = initialTasbih
             )
         }
         recomputeGeodesicAndPrayers(
@@ -600,5 +619,93 @@ class QiblaViewModel(application: Application) : AndroidViewModel(application) {
     fun stopAdhanPlayback() {
         AdhanForegroundService.stopAdhan(appContext)
         AdhanNotificationHelper.cancelAllPrayerPushNotifications(appContext)
+    }
+
+    fun selectLanguage(langCode: String, markOnboardingCompleted: Boolean = true) {
+        AppLanguageManager.setLanguage(appContext, langCode, markOnboardingCompleted)
+        _uiState.update {
+            it.copy(
+                appLanguageCode = langCode,
+                isLanguageOnboardingCompleted = if (markOnboardingCompleted) true else it.isLanguageOnboardingCompleted
+            )
+        }
+    }
+
+    fun completeLanguageOnboarding(langCode: String) {
+        selectLanguage(langCode, markOnboardingCompleted = true)
+    }
+
+    // ---------------------------------------------------------
+    // Digital Tasbih Interactive Actions
+    // ---------------------------------------------------------
+
+    fun incrementTasbih() {
+        val current = _uiState.value.tasbihState
+        val nextCount = current.currentCount + 1
+        val nextTotal = current.totalCount + 1
+        val target = current.targetCount
+
+        val isTargetReached = target > 0 && nextCount >= target
+        val updatedCount = if (isTargetReached && current.autoAdvanceTarget) 0 else nextCount
+        val updatedLap = if (isTargetReached) current.lapCount + 1 else current.lapCount
+
+        val updatedState = current.copy(
+            currentCount = updatedCount,
+            totalCount = nextTotal,
+            lapCount = updatedLap,
+            showTargetCompletedDialog = isTargetReached
+        )
+
+        _uiState.update { it.copy(tasbihState = updatedState) }
+        tasbihPrefsManager.saveTasbihState(updatedState)
+    }
+
+    fun resetTasbih() {
+        val updatedState = _uiState.value.tasbihState.copy(
+            currentCount = 0,
+            showTargetCompletedDialog = false
+        )
+        _uiState.update { it.copy(tasbihState = updatedState) }
+        tasbihPrefsManager.saveTasbihState(updatedState)
+    }
+
+    fun setTasbihTarget(target: Int) {
+        val current = _uiState.value.tasbihState
+        val updatedState = current.copy(
+            targetCount = target,
+            currentCount = if (target > 0 && current.currentCount >= target) 0 else current.currentCount
+        )
+        _uiState.update { it.copy(tasbihState = updatedState) }
+        tasbihPrefsManager.saveTasbihState(updatedState)
+    }
+
+    fun selectTasbihDzikir(index: Int) {
+        val current = _uiState.value.tasbihState
+        val preset = TasbihPresets.presets.getOrNull(index) ?: TasbihPresets.presets.first()
+        val updatedState = current.copy(
+            selectedDzikirIndex = index,
+            targetCount = if (preset.defaultTarget > 0) preset.defaultTarget else current.targetCount,
+            currentCount = 0
+        )
+        _uiState.update { it.copy(tasbihState = updatedState) }
+        tasbihPrefsManager.saveTasbihState(updatedState)
+    }
+
+    fun setTasbihBeadTheme(theme: TasbihBeadTheme) {
+        val updatedState = _uiState.value.tasbihState.copy(beadTheme = theme)
+        _uiState.update { it.copy(tasbihState = updatedState) }
+        tasbihPrefsManager.saveTasbihState(updatedState)
+    }
+
+    fun toggleTasbihSound(enabled: Boolean) {
+        val updatedState = _uiState.value.tasbihState.copy(soundEnabled = enabled)
+        _uiState.update { it.copy(tasbihState = updatedState) }
+        tasbihPrefsManager.saveTasbihState(updatedState)
+    }
+
+    fun toggleTasbihVibration(enabled: Boolean) {
+        val updatedState = _uiState.value.tasbihState.copy(vibrationEnabled = enabled)
+        _uiState.update { it.copy(tasbihState = updatedState) }
+        tasbihPrefsManager.saveTasbihState(updatedState)
     }
 }

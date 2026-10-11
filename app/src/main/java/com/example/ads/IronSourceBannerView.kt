@@ -33,15 +33,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.ironsource.mediationsdk.ISBannerSize
 import com.ironsource.mediationsdk.IronSourceBannerLayout
 
-private fun Context.findActivity(): Activity? {
-    var context = this
-    while (context is ContextWrapper) {
-        if (context is Activity) return context
-        context = context.baseContext
-    }
-    return null
-}
-
 /**
  * Composable that displays an ironSource LevelPlay Banner ad (with Meta Audience Network mediation).
  * Height standard banner is 50.dp.

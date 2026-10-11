@@ -86,6 +86,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
+import com.example.ads.IronSourceAdManager
 import com.example.data.NearbyMosqueItem
 import com.example.ui.QiblaUiState
 import com.example.ui.theme.AlignedEmerald
@@ -387,11 +388,13 @@ fun NearbyMosquesScreen(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = ripple(color = Color.White)
                         ) {
-                            openGoogleMapsSearchNearby(
-                                context = context,
-                                lat = uiState.latitude,
-                                lon = uiState.longitude
-                            )
+                            IronSourceAdManager.showRewardedVideoForMosque(context) {
+                                openGoogleMapsSearchNearby(
+                                    context = context,
+                                    lat = uiState.latitude,
+                                    lon = uiState.longitude
+                                )
+                            }
                         }
                         .padding(horizontal = 14.dp)
                         .testTag("open_google_maps_mosques_button"),
@@ -418,7 +421,10 @@ fun NearbyMosquesScreen(
                 }
 
                 OutlinedButton(
-                    onClick = onRefreshGpsAndMosques,
+                    onClick = {
+                        IronSourceAdManager.recordClick(context)
+                        onRefreshGpsAndMosques()
+                    },
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
                         .height(52.dp)
@@ -442,11 +448,13 @@ fun NearbyMosquesScreen(
             MosqueRadarInfoBox(
                 uiState = uiState,
                 onOpenGoogleMaps = {
-                    openGoogleMapsSearchNearby(
-                        context = context,
-                        lat = uiState.latitude,
-                        lon = uiState.longitude
-                    )
+                    IronSourceAdManager.showRewardedVideoForMosque(context) {
+                        openGoogleMapsSearchNearby(
+                            context = context,
+                            lat = uiState.latitude,
+                            lon = uiState.longitude
+                        )
+                    }
                 }
             )
 
@@ -469,7 +477,10 @@ fun NearbyMosquesScreen(
                         }
                         FilterChip(
                             selected = isSelected,
-                            onClick = { currentFilter = filter },
+                            onClick = {
+                                IronSourceAdManager.recordClick(context)
+                                currentFilter = filter
+                            },
                             label = {
                                 Text(
                                     text = "${filter.label} ($count)",
@@ -612,7 +623,9 @@ fun NearbyMosquesScreen(
                             mosque = mosque,
                             isClosest = index == 0,
                             onNavigateClick = {
-                                openGoogleMapsDirectionsToMosque(context, mosque)
+                                IronSourceAdManager.showRewardedVideoForMosque(context) {
+                                    openGoogleMapsDirectionsToMosque(context, mosque)
+                                }
                             }
                         )
                     }

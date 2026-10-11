@@ -1,0 +1,86 @@
+<resources>
+    <string name="app_name">Qibla Compass</string>
+    <string name="app_subtitle">High-Precision Kaaba Direction</string>
+    <string name="tab_compass">Compass</string>
+    <string name="tab_arrow">Arrow</string>
+    <string name="tab_prayer">Prayer Times</string>
+    <string name="tab_calendar">Calendar</string>
+    <string name="tab_tasbih">Tasbeeh</string>
+    <string name="tab_amalan">Deeds &amp; Dhikr</string>
+    <string name="tab_mosques">Mosques</string>
+    <string name="tab_sensor">Calibration</string>
+    <string name="qibla_aligned">EXACTLY FACING QIBLA</string>
+    <string name="qibla_turn_right">Turn Right %1$d°</string>
+    <string name="qibla_turn_left">Turn Left %1$d°</string>
+    <string name="qibla_almost_aligned">Almost Aligned (%1$d° left)</string>
+    <string name="label_qibla_bearing">Qibla Angle</string>
+    <string name="label_current_heading">Phone Heading</string>
+    <string name="label_distance_kaaba">Distance to Kaaba</string>
+    <string name="label_magnetic_declination">Magnetic Declination</string>
+    <string name="label_magnetic_field">Magnetic Field</string>
+    <string name="label_device_tilt">Phone Tilt</string>
+    <string name="status_gps_live">Live GPS Active</string>
+    <string name="status_gps_searching">Searching for GPS Signal…</string>
+    <string name="status_manual_city">Location: %1$s</string>
+    <string name="btn_grant_gps">Enable GPS Accuracy</string>
+    <string name="btn_refresh_gps">Refresh GPS</string>
+    <string name="btn_select_city">Select City</string>
+    <string name="btn_calibrate_guide">Calibration Guide</string>
+    <string name="accuracy_high">High Accuracy</string>
+    <string name="accuracy_medium">Medium Accuracy</string>
+    <string name="accuracy_low">Needs Calibration</string>
+    <string name="accuracy_unreliable">Magnetic Interference</string>
+    <string name="sensor_hardware_waiting_banner">Physical Magnetic Sensor (Awaiting Detection)</string>
+    <string name="tilt_warning">Lay phone flat on a level surface for maximum compass accuracy</string>
+    <string name="haptic_toggle_label">Vibrate When Facing Qibla</string>
+    <string name="true_north_toggle_label">True North Geodesic Correction</string>
+    <string name="kaaba_coordinates_info">Kaaba (Masjid al-Haram): 21.4225° N, 39.8262° E</string>
+    <string name="cd_kaaba_hero">Illustration of Kaaba at Masjid al-Haram</string>
+    <string name="cd_compass_dial">Real-time Precision Qibla Compass Dial</string>
+    <string name="cd_location_button">Select or update current location</string>
+    <string name="cd_haptic_button">Enable or disable vibration when facing Qibla</string>
+    <string name="widget_title">Prayer Times &amp; Qibla</string>
+    <string name="widget_description">Displays upcoming prayer time, countdown, and Qibla direction on your home screen.</string>
+
+    <!-- Language & Localization -->
+    <string name="language_setting_title">App Language</string>
+    <string name="language_setting_subtitle">Choose your interface language</string>
+    <string name="language_dialog_title">Select Language</string>
+    <string name="language_dialog_subtitle">Select the language that suits you best</string>
+    <string name="language_onboarding_welcome">Welcome</string>
+    <string name="language_onboarding_title">Choose App Language</string>
+    <string name="language_onboarding_desc">Please select your preferred language to get started. You can change this anytime in Settings.</string>
+    <string name="language_btn_save">Apply Language</string>
+    <string name="language_btn_continue">Save &amp; Continue</string>
+    <string name="language_btn_cancel">Cancel</string>
+    <string name="language_toast_applied">Language switched to %1$s</string>
+
+    <!-- Settings & Info Screen -->
+    <string name="settings_title">Settings &amp; Info</string>
+    <string name="settings_subtitle">Qibla Compass &amp; Prayer Times</string>
+    <string name="settings_rate_title">Rate This App</string>
+    <string name="settings_rate_desc">Your 5-star rating supports our ongoing development and updates</string>
+    <string name="settings_rate_btn">Rate on Google Play</string>
+    <string name="settings_share_title">Share App</string>
+    <string name="settings_share_desc">Invite family and friends to find the Qibla and accurate prayer times</string>
+    <string name="settings_share_btn">Share via WhatsApp / Social Media</string>
+    <string name="settings_about_title">About the App</string>
+    <string name="settings_about_desc">Feature details, algorithms, and developer info</string>
+    <string name="settings_dark_mode">Dark Mode</string>
+    <string name="settings_adhan_auto">Automatic Adhan</string>
+    <string name="settings_muezzin_title">Muezzin Voice Selection</string>
+
+    <!-- Prayer Times -->
+    <string name="prayer_fajr">Fajr</string>
+    <string name="prayer_sunrise">Sunrise</string>
+    <string name="prayer_dhuhr">Dhuhr</string>
+    <string name="prayer_asr">Asr</string>
+    <string name="prayer_maghrib">Maghrib</string>
+    <string name="prayer_isha">Isha</string>
+    <string name="prayer_imsak">Imsak</string>
+
+    <!-- Common Actions -->
+    <string name="action_back">Back</string>
+    <string name="action_close">Close</string>
+    <string name="action_search">Search</string>
+</resources>

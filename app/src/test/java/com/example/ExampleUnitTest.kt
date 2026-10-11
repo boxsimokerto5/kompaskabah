@@ -54,4 +54,17 @@ class ExampleUnitTest {
         assertEquals("Subuh", prayers.first().nameId)
         assertEquals("Isya", prayers.last().nameId)
     }
+
+    @Test
+    fun islamicCalendarHelper_convertsOctober2026Accurately() {
+        val hijri11Oct = com.example.domain.calendar.IslamicCalendarHelper.gregorianToHijri(2026, 10, 11)
+        assertEquals(1448, hijri11Oct.year)
+        // Check day and month
+        assertTrue(hijri11Oct.month in 4..5)
+        val grid = com.example.domain.calendar.IslamicCalendarHelper.getMonthCalendarGrid(2026, 10, 2026, 10, 11)
+        assertTrue(grid.size >= 35)
+        val todayCell = grid.find { it.isToday }
+        assertTrue(todayCell != null)
+        assertEquals(11, todayCell?.gregorianDay)
+    }
 }

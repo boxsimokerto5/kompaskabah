@@ -96,6 +96,9 @@ import com.example.domain.amalan.TahlilData
 import com.example.domain.amalan.WudhuData
 import com.example.domain.amalan.YasinData
 import com.example.service.IslamicTtsHelper
+import com.example.ads.IronSourceAdManager
+import com.example.ui.theme.DeepEmeraldPrimary
+import com.example.ui.theme.DeepGoldAccent
 
 // Palette Warna Emas Mewah Islami (Royal Islamic Gold & Emerald)
 val GoldGradientTop = Color(0xFFFFE89C)
@@ -110,6 +113,7 @@ val EmeraldAccent = Color(0xFF0F382B)
 fun AmalanScreen(
     onNavigateBackToCompass: () -> Unit,
     onOpenSettings: () -> Unit = {},
+    onOpenTasbih: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -144,10 +148,12 @@ fun AmalanScreen(
                 searchQuery = searchQuery,
                 onSearchChange = { searchQuery = it },
                 onSelectCategory = { category ->
+                    IronSourceAdManager.recordClick(context)
                     ttsHelper.stop()
                     selectedCategory = category
                 },
-                onOpenSettings = onOpenSettings
+                onOpenSettings = onOpenSettings,
+                onOpenTasbih = onOpenTasbih
             )
         } else {
             // Tampilan Detail Sub-Screen
@@ -157,6 +163,7 @@ fun AmalanScreen(
                 isPlaying = isPlaying,
                 currentlyPlayingId = currentlyPlayingId,
                 onBack = {
+                    IronSourceAdManager.recordClick(context)
                     ttsHelper.stop()
                     selectedCategory = null
                 }
@@ -170,7 +177,8 @@ private fun AmalanMainMenu(
     searchQuery: String,
     onSearchChange: (String) -> Unit,
     onSelectCategory: (AmalanCategory) -> Unit,
-    onOpenSettings: () -> Unit = {}
+    onOpenSettings: () -> Unit = {},
+    onOpenTasbih: () -> Unit = {}
 ) {
     val categories = remember { AmalanCategory.values().toList() }
     val filteredCategories = remember(searchQuery) {
@@ -323,7 +331,78 @@ private fun AmalanMainMenu(
             }
         }
 
-        // 3. Dynamic Colorful Game-Banner Style Amalan Cards (Sesuai Desain Gambar 2)
+        // 3. Featured Interactive Digital Tasbih Card with Moving Beads & Sujud Hero
+        item {
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
+                border = BorderStroke(1.5.dp, DeepGoldAccent.copy(alpha = 0.55f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .clickable { onOpenTasbih() }
+                    .testTag("amalan_tasbih_digital_featured_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(58.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.img_sujud_grand_mosque_1791732157493),
+                            contentDescription = "Tasbih Digital Hero",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "📿 Tasbih Digital",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = DeepEmeraldPrimary
+                            ) {
+                                Text(
+                                    text = "Butiran Bergerak",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Hitung dzikir dengan animasi butiran fisik & visual sujud sholat di masjid megah",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            lineHeight = 15.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        // 4. Dynamic Colorful Game-Banner Style Amalan Cards (Sesuai Desain Gambar 2)
         items(filteredCategories, key = { it.name }) { category ->
             ModernAmalanBannerCard(
                 category = category,
