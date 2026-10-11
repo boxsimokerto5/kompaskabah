@@ -29,6 +29,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -411,17 +412,18 @@ private fun TasbihTopAppBar(
 
 /**
  * Top Grand Mosque Sujud Hero Banner:
- * Displays an image of someone performing sujud in a grand, magnificent mosque
- * with high arches, ornate domes, and spiritual quotes.
+ * Displays a magnificent image of someone performing sujud in prayer inside a grand mosque
+ * with majestic arches, marble floors, ornate domes, and hadith on the virtue of sujud.
  */
 @Composable
 private fun GrandMosqueSujudHeroBanner(
     onClickVirtue: () -> Unit
 ) {
     Card(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = DarkCardSurface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        border = BorderStroke(1.2.dp, DeepGoldAccent.copy(alpha = 0.55f)),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
@@ -431,12 +433,12 @@ private fun GrandMosqueSujudHeroBanner(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
+                .height(215.dp)
         ) {
             // Photo of someone in sujud inside the grand mosque
             Image(
                 painter = painterResource(id = R.drawable.img_sujud_grand_mosque_1791732157493),
-                contentDescription = "Seseorang bersujud di dalam masjid yang megah",
+                contentDescription = "Seseorang sedang sujud sholat di dalam masjid yang megah",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
@@ -448,78 +450,91 @@ private fun GrandMosqueSujudHeroBanner(
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                Color.Black.copy(alpha = 0.35f),
+                                Color.Black.copy(alpha = 0.45f),
                                 Color.Transparent,
-                                Color.Black.copy(alpha = 0.82f)
+                                Color.Black.copy(alpha = 0.88f)
                             )
                         )
                     )
             )
 
-            // Top badge: Keutamaan Sujud
+            // Top badge: Sujud di Dalam Masjid yang Megah
             Row(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(12.dp)
                     .background(
-                        color = Color.Black.copy(alpha = 0.55f),
+                        color = Color.Black.copy(alpha = 0.65f),
                         shape = RoundedCornerShape(12.dp)
                     )
                     .border(
-                        width = 0.8.dp,
-                        color = DeepGoldAccent.copy(alpha = 0.6f),
+                        width = 1.dp,
+                        color = DeepGoldAccent.copy(alpha = 0.85f),
                         shape = RoundedCornerShape(12.dp)
                     )
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
                     text = "🕌",
-                    fontSize = 12.sp
+                    fontSize = 13.sp
                 )
                 Text(
-                    text = "Kemuliaan Sujud di Hadapan Allah",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    text = "Sujud Sholat di Dalam Masjid yang Megah",
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
             }
 
-            // Info button top right
-            IconButton(
-                onClick = onClickVirtue,
+            // Info button top right with tooltip
+            Surface(
+                shape = CircleShape,
+                color = Color.Black.copy(alpha = 0.55f),
+                border = BorderStroke(0.8.dp, DeepGoldAccent.copy(alpha = 0.6f)),
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(8.dp)
+                    .padding(10.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Informasi Keutamaan Sujud",
-                    tint = Color.White.copy(alpha = 0.9f)
-                )
+                IconButton(
+                    onClick = onClickVirtue,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Informasi Keutamaan Sujud & Dzikir",
+                        tint = DeepGoldAccent
+                    )
+                }
             }
 
-            // Bottom text: Hadith on Sujud
+            // Bottom text: Hadith on Sujud and spiritual reflection
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 Text(
-                    text = "أَقْرَبُ مَا يَكُونُ الْعَبْدُ مِنْ رَبِّهِ وَهُوَ سَاجِدٌ",
-                    fontSize = 15.sp,
+                    text = "أَقْرَبُ مَا يَكُونُ الْعَبْدُ مِنْ رَبِّهِ وَهُوَ سَاجِدٌ فَأَكْثِرُوا الدُّعَاءَ",
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = DeepGoldAccent,
                     fontFamily = FontFamily.Serif
                 )
                 Text(
-                    text = "\"Sedekat-dekatnya seorang hamba kepada Rabb-nya adalah ketika ia sedang sujud, maka perbanyaklah doa.\" (HR. Muslim)",
-                    fontSize = 11.sp,
-                    color = Color.White.copy(alpha = 0.92f),
+                    text = "\"Sedekat-dekatnya seorang hamba kepada Rabb-nya adalah ketika ia sedang sujud, maka perbanyaklah doa.\" (HR. Muslim No. 482)",
+                    fontSize = 11.5.sp,
+                    color = Color.White.copy(alpha = 0.95f),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "Sentuh untuk membaca kemuliaan sujud & rahasia tasbih ℹ️",
+                    fontSize = 10.sp,
+                    color = DeepGoldAccent.copy(alpha = 0.85f),
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
@@ -672,8 +687,16 @@ private fun TargetSelectorPillsRow(
 }
 
 /**
+ * Styles for interactive digital prayer beads animation.
+ */
+enum class TasbihBeadStyle(val label: String, val icon: String) {
+    LOOP_33("Untaian Melingkar (33)", "📿"),
+    VERTICAL_FALL("Untaian Geser Vertikal", "🧵")
+}
+
+/**
  * Animated Digital Tasbih with real moving beads.
- * When the user taps or drags down, beads physically rotate and glide smoothly along the loop thread.
+ * When the user taps or drags, beads physically rotate or slide down smoothly along the strand thread.
  */
 @Composable
 private fun AnimatedTasbihInteractiveCard(
@@ -682,14 +705,24 @@ private fun AnimatedTasbihInteractiveCard(
     progress: Float,
     onCount: () -> Unit
 ) {
+    // Current bead presentation style: Circular loop vs Vertical falling strand
+    var beadStyle by remember { mutableStateOf(TasbihBeadStyle.LOOP_33) }
+
     // Animated float for smooth bead movement with spring physics
     val animatedCount by animateFloatAsState(
         targetValue = tasbihState.currentCount.toFloat(),
         animationSpec = spring(
-            dampingRatio = 0.62f,
+            dampingRatio = 0.58f,
             stiffness = Spring.StiffnessMediumLow
         ),
         label = "tasbih_bead_movement"
+    )
+
+    // Animated scale bounce for central counter number on each click
+    val numberScale by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMediumLow),
+        label = "tasbih_number_scale"
     )
 
     // Drag offset accumulator for finger-sliding physical beads
@@ -701,7 +734,7 @@ private fun AnimatedTasbihInteractiveCard(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        border = BorderStroke(1.5.dp, DeepGoldAccent.copy(alpha = 0.35f)),
+        border = BorderStroke(1.5.dp, DeepGoldAccent.copy(alpha = 0.4f)),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
@@ -712,7 +745,7 @@ private fun AnimatedTasbihInteractiveCard(
                 .fillMaxWidth()
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Bead theme indicator and lap counter
             Row(
@@ -726,15 +759,15 @@ private fun AnimatedTasbihInteractiveCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(12.dp)
+                            .size(13.dp)
                             .background(tasbihState.beadTheme.baseColor, CircleShape)
-                            .border(1.dp, tasbihState.beadTheme.highlightColor, CircleShape)
+                            .border(1.2.dp, tasbihState.beadTheme.highlightColor, CircleShape)
                     )
                     Text(
                         text = tasbihState.beadTheme.displayName,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
@@ -745,24 +778,76 @@ private fun AnimatedTasbihInteractiveCard(
                     Text(
                         text = "Putaran ke-${tasbihState.lapCount}",
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
                     )
                 }
             }
 
-            // Interactive Bead Strand Canvas
+            // Animation Style Switcher: Loop 33 vs Vertical Fall
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FilterChip(
+                    selected = beadStyle == TasbihBeadStyle.LOOP_33,
+                    onClick = { beadStyle = TasbihBeadStyle.LOOP_33 },
+                    label = {
+                        Text(
+                            text = "📿 Untaian Melingkar",
+                            fontSize = 11.sp,
+                            fontWeight = if (beadStyle == TasbihBeadStyle.LOOP_33) FontWeight.Bold else FontWeight.Normal
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = DeepEmeraldPrimary,
+                        selectedLabelColor = Color.White
+                    ),
+                    modifier = Modifier.testTag("chip_bead_loop")
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                FilterChip(
+                    selected = beadStyle == TasbihBeadStyle.VERTICAL_FALL,
+                    onClick = { beadStyle = TasbihBeadStyle.VERTICAL_FALL },
+                    label = {
+                        Text(
+                            text = "🧵 Butiran Geser Vertikal",
+                            fontSize = 11.sp,
+                            fontWeight = if (beadStyle == TasbihBeadStyle.VERTICAL_FALL) FontWeight.Bold else FontWeight.Normal
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = DeepEmeraldPrimary,
+                        selectedLabelColor = Color.White
+                    ),
+                    modifier = Modifier.testTag("chip_bead_vertical")
+                )
+            }
+
+            // Interactive Bead Strand Canvas Box
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp)
+                    .height(310.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f))
                     .pointerInput(Unit) {
-                        detectDragGestures(
-                            onDrag = { change, dragAmount ->
+                        detectTapGestures(
+                            onTap = {
+                                onCount()
+                            }
+                        )
+                    }
+                    .pointerInput(Unit) {
+                        detectVerticalDragGestures(
+                            onVerticalDrag = { change, dragAmount ->
                                 change.consume()
-                                dragAccumulatorY += dragAmount.y
-                                if (dragAccumulatorY > 40f) {
+                                dragAccumulatorY += dragAmount
+                                if (dragAccumulatorY > 32f || dragAccumulatorY < -32f) {
                                     onCount()
                                     dragAccumulatorY = 0f
                                 }
@@ -771,24 +856,28 @@ private fun AnimatedTasbihInteractiveCard(
                                 dragAccumulatorY = 0f
                             }
                         )
-                    }
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onTap = {
-                                onCount()
-                            }
-                        )
                     },
                 contentAlignment = Alignment.Center
             ) {
-                // Moving Prayer Beads Canvas
-                TasbihBeadsTrackCanvas(
-                    animatedBeadProgress = animatedCount + (dragAccumulatorY / 40f).coerceIn(-0.8f, 0.8f),
-                    theme = tasbihState.beadTheme,
-                    modifier = Modifier.fillMaxSize()
-                )
+                val effectiveProgress = animatedCount + (dragAccumulatorY / 32f).coerceIn(-0.85f, 0.85f)
 
-                // Central Digital Counter Overlay
+                if (beadStyle == TasbihBeadStyle.LOOP_33) {
+                    // 1. Moving Circular 33 Prayer Beads Canvas
+                    TasbihBeadsTrackCanvas(
+                        animatedBeadProgress = effectiveProgress,
+                        theme = tasbihState.beadTheme,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    // 2. Physical Vertical Falling Strand Beads Canvas
+                    TasbihVerticalStrandCanvas(
+                        animatedBeadProgress = effectiveProgress,
+                        theme = tasbihState.beadTheme,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                // Central Digital Counter Circle Overlay
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
@@ -797,8 +886,8 @@ private fun AnimatedTasbihInteractiveCard(
                         .background(
                             brush = Brush.radialGradient(
                                 colors = listOf(
-                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.88f)
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f)
                                 )
                             ),
                             shape = CircleShape
@@ -833,7 +922,7 @@ private fun AnimatedTasbihInteractiveCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
 
                     // Progress percentage
                     if (tasbihState.targetCount > 0) {
@@ -844,6 +933,27 @@ private fun AnimatedTasbihInteractiveCard(
                             color = AlignedEmerald
                         )
                     }
+                }
+
+                // Gesture guidance caption at top/bottom of canvas
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 6.dp)
+                        .background(
+                            color = Color.Black.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(text = "👇", fontSize = 10.sp)
+                    Text(
+                        text = "Geser ke bawah atau sentuh butiran",
+                        fontSize = 10.sp,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
                 }
             }
 
@@ -915,7 +1025,7 @@ private fun AnimatedTasbihInteractiveCard(
 }
 
 /**
- * Canvas drawing the physical prayer beads track (Tasbih strand).
+ * Canvas drawing the physical prayer beads track (Tasbih strand in 33-bead loop).
  * The beads are rendered in an oval track with rich 3D sphere gradient lighting.
  * When animatedBeadProgress changes, the entire strand rotates so beads physically slide!
  */
@@ -1067,10 +1177,136 @@ private fun TasbihBeadsTrackCanvas(
             center = Offset(bottomX, bottomY)
         )
         drawCircle(
-            color = AlignedEmerald,
-            radius = 3.dp.toPx(),
+            color = GoldHighlight,
+            radius = 3.5.dp.toPx(),
             center = Offset(bottomX, bottomY + 18.dp.toPx())
         )
+    }
+}
+
+/**
+ * Canvas drawing the physical vertical falling prayer beads strand.
+ * The beads visibly slide down one by one through a central golden Mihrab gate!
+ */
+@Composable
+private fun TasbihVerticalStrandCanvas(
+    animatedBeadProgress: Float,
+    theme: TasbihBeadTheme,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val cx = w / 2f
+        val cy = h / 2f
+
+        // Central braided silk thread
+        drawLine(
+            color = theme.stringColor.copy(alpha = 0.9f),
+            start = Offset(cx, 0f),
+            end = Offset(cx, h),
+            strokeWidth = 3.5.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+
+        // Subtle side silk twist
+        drawLine(
+            color = theme.highlightColor.copy(alpha = 0.35f),
+            start = Offset(cx + 1.2.dp.toPx(), 0f),
+            end = Offset(cx + 1.2.dp.toPx(), h),
+            strokeWidth = 1.dp.toPx()
+        )
+
+        val beadSpacing = 44.dp.toPx()
+        val yOffset = (animatedBeadProgress * beadSpacing) % beadSpacing
+
+        // Draw counting gate reticle in the center
+        drawCircle(
+            color = DeepGoldAccent.copy(alpha = 0.18f),
+            radius = 42.dp.toPx(),
+            center = Offset(cx, cy)
+        )
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    GoldHighlight.copy(alpha = 0.45f),
+                    DeepGoldAccent.copy(alpha = 0.15f),
+                    Color.Transparent
+                ),
+                center = Offset(cx, cy),
+                radius = 50.dp.toPx()
+            ),
+            radius = 50.dp.toPx(),
+            center = Offset(cx, cy)
+        )
+        drawCircle(
+            color = DeepGoldAccent.copy(alpha = 0.7f),
+            radius = 30.dp.toPx(),
+            center = Offset(cx, cy),
+            style = Stroke(width = 1.5.dp.toPx())
+        )
+
+        // Number of visible beads above and below center
+        val visibleRange = (h / beadSpacing).toInt() / 2 + 3
+        for (i in -visibleRange..visibleRange) {
+            val by = cy + (i * beadSpacing) + yOffset
+            if (by < -beadSpacing || by > h + beadSpacing) continue
+
+            // Distance to center focal reticle determines scale and brightness
+            val distToCenter = kotlin.math.abs(by - cy)
+            val focusFactor = (1f - (distToCenter / (beadSpacing * 2.2f))).coerceIn(0.65f, 1.35f)
+
+            // Base bead radius
+            val isMarkerBead = ((i + animatedBeadProgress.toInt()) % 11 == 0)
+            val baseRadius = if (isMarkerBead) 16.dp.toPx() else 13.5.dp.toPx()
+            val beadRadius = baseRadius * focusFactor
+
+            // Drop shadow
+            drawCircle(
+                color = Color.Black.copy(alpha = 0.32f),
+                radius = beadRadius,
+                center = Offset(cx + 2.dp.toPx(), by + 3.dp.toPx())
+            )
+
+            // 3D sphere gradient
+            val gradientColors = if (isMarkerBead) {
+                listOf(GoldHighlight, DeepGoldAccent, Color(0xFF6B4307))
+            } else {
+                listOf(theme.highlightColor, theme.baseColor, theme.shadowColor)
+            }
+
+            val lightOffset = Offset(
+                cx - beadRadius * 0.35f,
+                by - beadRadius * 0.35f
+            )
+
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = gradientColors,
+                    center = lightOffset,
+                    radius = beadRadius * 1.35f
+                ),
+                radius = beadRadius,
+                center = Offset(cx, by)
+            )
+
+            // Specular highlight spot
+            drawCircle(
+                color = Color.White.copy(alpha = if (isMarkerBead) 0.7f else 0.5f),
+                radius = beadRadius * 0.28f,
+                center = Offset(cx - beadRadius * 0.35f, by - beadRadius * 0.35f)
+            )
+
+            // Active bead halo if near center
+            if (distToCenter < beadSpacing * 0.45f) {
+                drawCircle(
+                    color = GoldHighlight.copy(alpha = 0.65f),
+                    radius = beadRadius + 3.dp.toPx(),
+                    center = Offset(cx, by),
+                    style = Stroke(width = 1.8.dp.toPx())
+                )
+            }
+        }
     }
 }
 
