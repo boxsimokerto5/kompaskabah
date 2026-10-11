@@ -29,19 +29,19 @@ jobs:
       contents: write
 
     steps:
-      - name: 1. Checkout Repository
+      - name: "1. Checkout Repository"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 2. Set up JDK 21 (Temurin)
+      - name: "2. Set up JDK 21 (Temurin)"
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
           cache: 'gradle'
 
-      - name: 3. Siapkan File Environment (.env)
+      - name: "3. Siapkan File Environment (.env)"
         run: |
           if [ -f .env.example ]; then
             cp .env.example .env
@@ -49,10 +49,10 @@ jobs:
             touch .env
           fi
 
-      - name: 4. Beri Izin Eksekusi Gradle Wrapper
+      - name: "4. Beri Izin Eksekusi Gradle Wrapper"
         run: chmod +x gradlew
 
-      - name: 5. Siapkan Keystore Tanda Tangan Rilis
+      - name: "5. Siapkan Keystore Tanda Tangan Rilis"
         id: setup_keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
@@ -91,10 +91,10 @@ jobs:
           echo "Informasi Sidik Jari Keystore:"
           keytool -list -v -keystore "$KEYSTORE_FILE" -storepass "$STORE_PASS" -alias "$KEY_ALIAS" | grep -E "SHA1:|SHA256:" || true
 
-      - name: 6. Build Release APK & AAB (Bundle & Installable APK)
+      - name: "6. Build Release APK & AAB (Bundle & Installable APK)"
         run: ./gradlew assembleRelease bundleRelease --stacktrace
 
-      - name: 7. Siapkan Folder Artefak Rilis
+      - name: "7. Siapkan Folder Artefak Rilis"
         run: |
           mkdir -p release-artifacts
           cp app/build/outputs/apk/release/*.apk release-artifacts/KompasKiblat-Release.apk 2>/dev/null || cp app/build/outputs/apk/release/*.apk release-artifacts/
@@ -105,7 +105,7 @@ jobs:
           echo "=== Berkas Artefak yang Siap Diunggah ==="
           ls -lh release-artifacts/
 
-      - name: 8. Upload Artifact: Paket Rilis Lengkap (APK + AAB + Keystore)
+      - name: "8. Upload Artifact: Paket Rilis Lengkap (APK + AAB + Keystore)"
         uses: actions/upload-artifact@v4
         with:
           name: Kompas-Kiblat-Release-Package
@@ -113,7 +113,7 @@ jobs:
           if-no-files-found: error
           retention-days: 60
 
-      - name: 9. Upload Artifact: AAB Google Play Store
+      - name: "9. Upload Artifact: AAB Google Play Store"
         uses: actions/upload-artifact@v4
         with:
           name: app-release-aab
@@ -121,7 +121,7 @@ jobs:
           if-no-files-found: error
           retention-days: 60
 
-      - name: 10. Upload Artifact: APK Standalone Installable
+      - name: "10. Upload Artifact: APK Standalone Installable"
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
@@ -129,7 +129,7 @@ jobs:
           if-no-files-found: error
           retention-days: 60
 
-      - name: 11. Publikasikan ke GitHub Release
+      - name: "11. Publikasikan ke GitHub Release"
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         continue-on-error: true
