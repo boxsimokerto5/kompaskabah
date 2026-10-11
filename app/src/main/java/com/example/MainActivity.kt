@@ -12,6 +12,7 @@ import com.example.ui.QiblaMainScreen
 import com.example.ui.QiblaNavigationTab
 import com.example.ui.QiblaViewModel
 import com.example.ui.theme.MyApplicationTheme
+import com.example.ads.IronSourceAdManager
 import com.example.widget.QiblaPrayerWidgetProvider
 
 class MainActivity : ComponentActivity() {
@@ -22,6 +23,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         handleWidgetDeepLinkIntent(intent)
+
+        // Initialize ironSource LevelPlay SDK with Meta Audience Network
+        IronSourceAdManager.init(this)
 
         setContent {
             val uiState by qiblaViewModel.uiState.collectAsStateWithLifecycle()
@@ -47,6 +51,16 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        IronSourceAdManager.onResume(this)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        IronSourceAdManager.onPause(this)
     }
 
     override fun onNewIntent(intent: Intent) {

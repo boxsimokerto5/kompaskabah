@@ -19,3 +19,19 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# ironSource LevelPlay
+-keepclassmembers class * implements android.os.IInterface {
+    <methods>;
+}
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+-keep class com.ironsource.** { *; }
+-dontwarn com.ironsource.**
+-dontwarn com.moat.**
+
+# Meta Audience Network
+-keep class com.facebook.ads.** { *; }
+-keepclassmembers class com.facebook.ads.** { *; }
+-dontwarn com.facebook.ads.**

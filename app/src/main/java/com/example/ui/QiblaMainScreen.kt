@@ -108,6 +108,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.R
+import com.example.ads.IronSourceBannerAd
 import com.example.data.MuezzinVoiceOption
 import com.example.domain.QiblaCalculator
 import com.example.service.AdhanPlaybackState
@@ -244,6 +245,13 @@ fun QiblaMainScreen(
                             )
                         }
 
+                        // ironSource LevelPlay Banner Ad (Meta Audience Network Adapter)
+                        IronSourceBannerAd(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+
                         ElegantQiblaBottomMenuBar(
                             selectedTab = uiState.selectedTab,
                             onSelectTab = onSelectTab
@@ -360,6 +368,14 @@ fun QiblaMainScreen(
                                 )
                             }
                         }
+                    }
+
+                    if (isWideScreen) {
+                        IronSourceBannerAd(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                        )
                     }
                 }
             }
