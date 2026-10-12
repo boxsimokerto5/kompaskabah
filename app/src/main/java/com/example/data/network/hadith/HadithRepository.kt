@@ -28,7 +28,7 @@ class HadithRepositoryImpl(
                 gradeStatus = "🟢 Shahih Mutlak",
                 badgeColorHex = 0xFF1B8A5A,
                 description = "Kitab hadits paling otentik dalam Islam setelah Al-Qur'an (Muttafaqun 'Alaih). Menghimpun hadits-hadits shahih dengan sanad tersambung tanpa cacat.",
-                imageRes = R.drawable.img_quran_yasin_rehal_1791679991654,
+                imageRes = R.drawable.img_makkah_bright_daylight_1791802483315,
                 sections = listOf(
                     HadithBookSection(1, "Bab 1: Permulaan Turunnya Wahyu", "Revelation", "Hadits 1 - 7", "Kisah turunnya wahyu pertama kepada Rasulullah ﷺ di Gua Hira & permulaan risalah kenabian."),
                     HadithBookSection(2, "Bab 2: Kitab Keimanan", "Belief", "Hadits 8 - 58", "Hakikat rukun iman, cabang-cabang keimanan, dan tanda-tanda kemanisan iman."),
@@ -50,7 +50,7 @@ class HadithRepositoryImpl(
                 gradeStatus = "🟢 Shahih Mutlak",
                 badgeColorHex = 0xFF1B8A5A,
                 description = "Kitab hadits shahih terpercaya kedua dengan sistematika penulisan matan dan jalur sanad yang sangat rapi dan komprehensif.",
-                imageRes = R.drawable.img_nabawi_green_dome_1791680082165,
+                imageRes = R.drawable.img_madinah_nabawi_bright_1791802506213,
                 sections = listOf(
                     HadithBookSection(1, "Bab 1: Kitab Iman & Tauhid", "Faith", "Hadits 1 - 222", "Pondasi rukun iman, keesaan Allah SWT, dan larangan syirik besar."),
                     HadithBookSection(2, "Bab 2: Kitab Thaharah & Bersuci", "Purification", "Hadits 223 - 292", "Kesucian badan dan pakaian, tata cara wudhu, siwak, dan tayamum."),
@@ -70,7 +70,7 @@ class HadithRepositoryImpl(
                 gradeStatus = "🟡 Hasan & Shahih",
                 badgeColorHex = 0xFFC07000,
                 description = "Pelopor pengelompokan derajat hadits Hasan serta memuat penjelasan ikhtilaf pandangan madzhab fiqih para fuqaha.",
-                imageRes = R.drawable.img_golden_mosque_sunset_1791637680885,
+                imageRes = R.drawable.img_grand_mosque_blue_sky_1791642671931,
                 sections = listOf(
                     HadithBookSection(1, "Bab 1: Kitab Bersuci (Thaharah)", "Purification", "Hadits 1 - 148", "Hukum air, tatacara wudhu, dan doa setelah bersuci."),
                     HadithBookSection(2, "Bab 2: Kitab Sholat", "Salat", "Hadits 149 - 451", "Waktu-waktu sholat fardhu, sholat witir, dan bacaan ruku' sujud."),
@@ -88,7 +88,7 @@ class HadithRepositoryImpl(
                 gradeStatus = "🟡 Shahih & Hasan",
                 badgeColorHex = 0xFFC07000,
                 description = "Koleksi hadits fiqih dan hukum syariat paling lengkap yang menjadi rujukan utama para mujtahid dan hakim Islam.",
-                imageRes = R.drawable.img_grand_mosque_blue_sky_1791642671931,
+                imageRes = R.drawable.img_kaaba_daylight_1791628182842,
                 sections = listOf(
                     HadithBookSection(1, "Bab 1: Kitab Bersuci (Thaharah)", "Purification", "Hadits 1 - 390", "Hukum thaharah, adab buang hajat, dan rukun wudhu secara rinci."),
                     HadithBookSection(2, "Bab 2: Kitab Sholat", "Prayer", "Hadits 391 - 1160", "Tata cara sholat berjamaah, imam sholat, dan sholat musafir."),
@@ -105,7 +105,7 @@ class HadithRepositoryImpl(
                 gradeStatus = "🟡 Shahih & Hasan",
                 badgeColorHex = 0xFFC07000,
                 description = "Dikenal dengan seleksi perawi yang sangat teliti dan ketat, memuat hadits-hadits ibadah praktis berderajat tinggi.",
-                imageRes = R.drawable.img_sujud_grand_mosque_1791732157493,
+                imageRes = R.drawable.img_kaaba_hero_1791626804538,
                 sections = listOf(
                     HadithBookSection(1, "Bab 1: Kitab Bersuci", "Purification", "Hadits 1 - 347", "Sunnah-sunnah fitrah, siwak, dan pembatal wudhu."),
                     HadithBookSection(5, "Bab 5: Kitab Sholat & Waktu", "Salah", "Hadits 448 - 687", "Pembagian waktu sholat lima waktu dan peringatan melalaikannya."),
@@ -121,7 +121,7 @@ class HadithRepositoryImpl(
                 gradeStatus = "🟠 Hasan & Dha'if Ringan",
                 badgeColorHex = 0xFFD32F2F,
                 description = "Salah satu Kutubus Sittah yang sarat dengan riwayat fadhilah amal, tazkiyatun nufus, dan nasihat zuhud kehidupan.",
-                imageRes = R.drawable.img_desert_prayer_hero_1791637232343,
+                imageRes = R.drawable.img_golden_mosque_sunset_1791637680885,
                 sections = listOf(
                     HadithBookSection(1, "Bab 1: Kitab Bersuci & Sunnahnya", "Purification and its Sunnah", "Hadits 267 - 666", "Tata cara bersuci dan doa-doa sunnah dalam thaharah."),
                     HadithBookSection(5, "Bab 5: Kitab Sholat Berjamaah", "Establishing the Prayer", "Hadits 734 - 1432", "Keutamaan sholat berjamaah 27 derajat dan sholat sunnah rawatib."),
@@ -137,7 +137,7 @@ class HadithRepositoryImpl(
                 gradeStatus = "🟢 Shahih Ash-Shahih",
                 badgeColorHex = 0xFF1B8A5A,
                 description = "Kitab hadits dan atsar fiqih tertua karya Imam Darul Hijrah, merangkum tradisi amalan shahih penduduk Madinah.",
-                imageRes = R.drawable.img_oasis_wudhu_spring_1791679946849,
+                imageRes = R.drawable.img_sujud_grand_mosque_1791732157493,
                 sections = listOf(
                     HadithBookSection(1, "Bab 1: Waktu-Waktu Sholat", "Prayer Times", "Hadits 1 - 31", "Awal dan akhir waktu sholat fardhu dari amalan sahabat di Madinah."),
                     HadithBookSection(2, "Bab 2: Bersuci (Thaharah)", "Purity", "Hadits 32 - 128", "Kesucian air, wudhu Rasulullah ﷺ, dan mandi besar."),

@@ -18,6 +18,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -65,6 +66,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -98,7 +100,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
@@ -172,6 +177,9 @@ fun HaditsCatalogContent(
     var selectedBook by remember { mutableStateOf<HadithBook?>(null) }
     var selectedSection by remember { mutableStateOf<HadithBookSection?>(null) }
     var showKnowledgeDialog by remember { mutableStateOf(false) }
+    var showSearchDialog by remember { mutableStateOf(false) }
+    var kumpulanKitabSearchQuery by remember { mutableStateOf("") }
+    var kumpulanKitabSearchFilter by remember { mutableStateOf(KumpulanKitabSearchFilter.ALL) }
 
     // Intercept back button based on nested level
     BackHandler {
@@ -191,6 +199,34 @@ fun HaditsCatalogContent(
 
     if (showKnowledgeDialog) {
         HaditsKnowledgeDialog(onDismiss = { showKnowledgeDialog = false })
+    }
+
+    // Pop-Up Dialog Pencarian Kumpulan Kitab & Bab
+    if (showSearchDialog) {
+        KumpulanKitabSearchPopUpDialog(
+            initialQuery = kumpulanKitabSearchQuery,
+            initialFilter = kumpulanKitabSearchFilter,
+            repository = hadithRepository,
+            onApplySearch = { query, filter ->
+                kumpulanKitabSearchQuery = query
+                kumpulanKitabSearchFilter = filter
+                currentTab = HaditsScreenTab.KUMPULAN_KITAB
+                showSearchDialog = false
+            },
+            onSelectBook = { book ->
+                selectedBook = book
+                selectedSection = null
+                currentTab = HaditsScreenTab.KUMPULAN_KITAB
+                showSearchDialog = false
+            },
+            onSelectBookAndSection = { book, section ->
+                selectedBook = book
+                selectedSection = section
+                currentTab = HaditsScreenTab.KUMPULAN_KITAB
+                showSearchDialog = false
+            },
+            onDismiss = { showSearchDialog = false }
+        )
     }
 
     Column(
@@ -229,30 +265,12 @@ fun HaditsCatalogContent(
                             modifier = Modifier.weight(1f),
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text(
-                                    text = "Katalog Hadits",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = DeepGoldAccent.copy(alpha = 0.2f),
-                                    border = BorderStroke(0.8.dp, DeepGoldAccent)
-                                ) {
-                                    Text(
-                                        text = if (currentTab == HaditsScreenTab.TEMATIK_DERAJAT) "Tematik" else "Kumpulan Kitab",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = DeepGoldAccent,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
-                                    )
-                                }
-                            }
+                            Text(
+                                text = "Katalog Hadits",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                             Text(
                                 text = if (currentTab == HaditsScreenTab.TEMATIK_DERAJAT) {
                                     "Shahih, Hasan, Dha'if & Edukasi Populer"
@@ -264,6 +282,29 @@ fun HaditsCatalogContent(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
+                        }
+
+                        // Tombol Ikon Kaca Pembesar (Pencarian Pop Up)
+                        IconButton(
+                            onClick = { showSearchDialog = true },
+                            modifier = Modifier.testTag("btn_hadits_search_icon")
+                        ) {
+                            Box {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Pencarian Kitab & Hadits",
+                                    tint = if (kumpulanKitabSearchQuery.isNotBlank()) DeepGoldAccent else DeepEmeraldPrimary
+                                )
+                                if (kumpulanKitabSearchQuery.isNotBlank()) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = DeepGoldAccent,
+                                        modifier = Modifier
+                                            .size(7.dp)
+                                            .align(Alignment.TopEnd)
+                                    ) {}
+                                }
+                            }
                         }
 
                         IconButton(
@@ -344,6 +385,10 @@ fun HaditsCatalogContent(
                     currentlyPlayingId = currentlyPlayingId,
                     selectedBook = selectedBook,
                     selectedSection = selectedSection,
+                    searchQuery = kumpulanKitabSearchQuery,
+                    selectedFilter = kumpulanKitabSearchFilter,
+                    onOpenSearchDialog = { showSearchDialog = true },
+                    onClearSearch = { kumpulanKitabSearchQuery = "" },
                     onSelectBook = { book ->
                         selectedBook = book
                         selectedSection = null
@@ -388,6 +433,226 @@ data class BookSectionSearchResult(
 )
 
 /**
+ * Pop-up Dialog Pencarian Kitab & Hadits (Kumpulan Kitab)
+ * Muncul ketika pengguna menekan ikon kaca pembesar di bagian atas
+ */
+@Composable
+private fun KumpulanKitabSearchPopUpDialog(
+    initialQuery: String,
+    initialFilter: KumpulanKitabSearchFilter,
+    repository: HadithRepository,
+    onApplySearch: (String, KumpulanKitabSearchFilter) -> Unit,
+    onSelectBook: (HadithBook) -> Unit,
+    onSelectBookAndSection: (HadithBook, HadithBookSection) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var queryInput by remember { mutableStateOf(initialQuery) }
+    var filterSelection by remember { mutableStateOf(initialFilter) }
+    val books = remember { repository.getAvailableBooks() }
+
+    val allSections = remember(books) {
+        books.flatMap { bItem -> bItem.sections.map { BookSectionSearchResult(bItem, it) } }
+    }
+
+    val q = queryInput.trim().lowercase()
+    val matchedBooks = remember(books, q) {
+        if (q.isBlank()) emptyList() else books.filter {
+            it.title.lowercase().contains(q) ||
+                    it.author.lowercase().contains(q) ||
+                    it.description.lowercase().contains(q)
+        }
+    }
+    val matchedSections = remember(allSections, q) {
+        if (q.isBlank()) emptyList() else allSections.filter { item ->
+            item.section.titleId.lowercase().contains(q) ||
+                    item.section.titleEn.lowercase().contains(q) ||
+                    item.section.description.lowercase().contains(q) ||
+                    item.book.title.lowercase().contains(q)
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    tint = DeepEmeraldPrimary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    text = "Pencarian Kitab & Hadits",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Kolom Input Pencarian
+                OutlinedTextField(
+                    value = queryInput,
+                    onValueChange = { queryInput = it },
+                    placeholder = {
+                        Text(
+                            text = "Ketik judul kitab, bab, topik...",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = DeepEmeraldPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
+                    trailingIcon = {
+                        if (queryInput.isNotEmpty()) {
+                            IconButton(onClick = { queryInput = "" }) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "Hapus",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("dialog_search_input_field"),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = DeepEmeraldPrimary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
+                    )
+                )
+
+                // Pilihan Filter Lingkup
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    FilterChip(
+                        selected = filterSelection == KumpulanKitabSearchFilter.ALL,
+                        onClick = { filterSelection = KumpulanKitabSearchFilter.ALL },
+                        label = { Text("Semua", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = DeepEmeraldPrimary,
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                    FilterChip(
+                        selected = filterSelection == KumpulanKitabSearchFilter.BOOKS,
+                        onClick = { filterSelection = KumpulanKitabSearchFilter.BOOKS },
+                        label = { Text("📚 Kitab", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = DeepEmeraldPrimary,
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                    FilterChip(
+                        selected = filterSelection == KumpulanKitabSearchFilter.CHAPTERS,
+                        onClick = { filterSelection = KumpulanKitabSearchFilter.CHAPTERS },
+                        label = { Text("📖 Bab", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = DeepEmeraldPrimary,
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                }
+
+                // Kata Kunci Populer / Cepat
+                Text(
+                    text = "Kata Kunci Populer:",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val quickTopics = listOf("Wahyu", "Iman", "Sholat", "Zakat", "Puasa", "Adab", "Bukhari", "Muslim")
+                    quickTopics.forEach { topic ->
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(0.6.dp, DeepEmeraldPrimary.copy(alpha = 0.3f)),
+                            modifier = Modifier.clickable {
+                                queryInput = topic
+                                filterSelection = KumpulanKitabSearchFilter.ALL
+                            }
+                        ) {
+                            Text(
+                                text = "#$topic",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = DeepEmeraldPrimary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (q.isNotBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = DeepEmeraldPrimary.copy(alpha = 0.1f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Ditemukan: ${matchedBooks.size} Kitab • ${matchedSections.size} Bab",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepEmeraldPrimary,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onApplySearch(queryInput, filterSelection)
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = DeepEmeraldPrimary),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(if (queryInput.isBlank()) "Tampilkan Semua" else "Terapkan Pencarian")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss
+            ) {
+                Text("Tutup", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        shape = RoundedCornerShape(20.dp),
+        containerColor = MaterialTheme.colorScheme.surface
+    )
+}
+
+/**
  * Tab 2: Kumpulan Kitab Hierarki 3 Tingkat
  * Level 1: Daftar Banner Kitab (Shahih Bukhari, Muslim, dll.) dengan tombol berdenyut tersusun ke bawah
  * Level 2: Daftar Bab / Sub-Kategori dari Kitab terpilih, semua tersusun ke bawah
@@ -401,6 +666,10 @@ private fun KumpulanKitabHierarchicalView(
     currentlyPlayingId: String?,
     selectedBook: HadithBook?,
     selectedSection: HadithBookSection?,
+    searchQuery: String,
+    selectedFilter: KumpulanKitabSearchFilter,
+    onOpenSearchDialog: () -> Unit,
+    onClearSearch: () -> Unit,
     onSelectBook: (HadithBook) -> Unit,
     onSelectSection: (HadithBookSection) -> Unit,
     onSelectBookAndSection: (HadithBook, HadithBookSection) -> Unit,
@@ -430,10 +699,14 @@ private fun KumpulanKitabHierarchicalView(
             )
         }
 
-        // LEVEL 1: Menampilkan Daftar Banner Kitab & Bilah Pencarian di Bagian Atas
+        // LEVEL 1: Menampilkan Daftar Banner Kitab (Hero & Banner Slim Terang)
         else -> {
             BooksBannerVerticalList(
                 repository = repository,
+                searchQuery = searchQuery,
+                selectedFilter = selectedFilter,
+                onOpenSearchDialog = onOpenSearchDialog,
+                onClearSearch = onClearSearch,
                 onSelectBook = onSelectBook,
                 onSelectBookAndSection = onSelectBookAndSection
             )
@@ -442,26 +715,29 @@ private fun KumpulanKitabHierarchicalView(
 }
 
 /**
- * Level 1: Layar Kumpulan Kitab dengan Search Bar Tersemat di Bagian Paling Atas
- * Memungkinkan pengguna mencari kitab hadits maupun bab/sub-kategori pembahasan dengan cepat
+ * Level 1: Layar Kumpulan Kitab dengan Desain Luas & Terang
+ * Kolom pencarian & baris filter permanen dihilangkan agar tempatnya lebih luas,
+ * diganti dengan ikon kaca pembesar pop-up di pojok atas.
  */
 @Composable
 private fun BooksBannerVerticalList(
     repository: HadithRepository,
+    searchQuery: String,
+    selectedFilter: KumpulanKitabSearchFilter,
+    onOpenSearchDialog: () -> Unit,
+    onClearSearch: () -> Unit,
     onSelectBook: (HadithBook) -> Unit,
     onSelectBookAndSection: (HadithBook, HadithBookSection) -> Unit
 ) {
     val context = LocalContext.current
     val books = remember { repository.getAvailableBooks() }
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedFilter by remember { mutableStateOf(KumpulanKitabSearchFilter.ALL) }
 
     // Hitung seluruh bab dari semua kitab
     val allSections = remember(books) {
         books.flatMap { bItem -> bItem.sections.map { BookSectionSearchResult(bItem, it) } }
     }
 
-    // Filter books & chapters berdasarkan query dan chip filter
+    // Filter books & chapters berdasarkan query dan chip filter dari pop-up
     val (filteredBooks, filteredSections) = remember(books, allSections, searchQuery, selectedFilter) {
         val q = searchQuery.trim().lowercase()
         if (q.isBlank()) {
@@ -497,142 +773,59 @@ private fun BooksBannerVerticalList(
             .testTag("kumpulan_kitab_container")
     ) {
         // ==========================================
-        // BILAH PENCARIAN TERSEMAT DI BAGIAN ATAS
+        // SLIM INDIKATOR PENCARIAN AKTIF (JIKA ADA QUERY)
+        // Kolom pencarian & baris filter permanen dihilangkan agar layar luas
         // ==========================================
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("kumpulan_kitab_search_bar_header"),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 2.dp,
-            shadowElevation = if (searchQuery.isNotBlank()) 4.dp else 1.dp
-        ) {
-            Column(
+        if (searchQuery.isNotBlank()) {
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
+                    .padding(horizontal = 14.dp, vertical = 6.dp)
+                    .testTag("kumpulan_kitab_active_search_pill"),
+                shape = RoundedCornerShape(12.dp),
+                color = DeepEmeraldPrimary.copy(alpha = 0.08f),
+                border = BorderStroke(0.8.dp, DeepEmeraldPrimary.copy(alpha = 0.25f))
             ) {
-                // Outlined Search Input Field
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("kumpulan_kitab_search_bar"),
-                    placeholder = {
-                        Text(
-                            text = "Cari kitab, imam, atau bab (misal: Iman, Wahyu, Shalat)...",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Cari Kitab atau Bab",
-                            tint = DeepEmeraldPrimary
-                        )
-                    },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(
-                                onClick = { searchQuery = "" },
-                                modifier = Modifier.testTag("kumpulan_kitab_search_clear")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Clear,
-                                    contentDescription = "Hapus Pencarian",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = DeepEmeraldPrimary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.20f)
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Baris Filter Mode & Rekomendasi Kata Kunci Cepat
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Filter Semua
-                    FilterChip(
-                        selected = selectedFilter == KumpulanKitabSearchFilter.ALL,
-                        onClick = { selectedFilter = KumpulanKitabSearchFilter.ALL },
-                        label = { Text("Semua", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = DeepEmeraldPrimary,
-                            selectedLabelColor = Color.White
-                        ),
-                        modifier = Modifier.testTag("chip_filter_all")
-                    )
-
-                    // Filter Hanya Kitab
-                    FilterChip(
-                        selected = selectedFilter == KumpulanKitabSearchFilter.BOOKS,
-                        onClick = { selectedFilter = KumpulanKitabSearchFilter.BOOKS },
-                        label = { Text("📚 Kitab (${books.size})", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = DeepEmeraldPrimary,
-                            selectedLabelColor = Color.White
-                        ),
-                        modifier = Modifier.testTag("chip_filter_books")
-                    )
-
-                    // Filter Hanya Bab
-                    FilterChip(
-                        selected = selectedFilter == KumpulanKitabSearchFilter.CHAPTERS,
-                        onClick = { selectedFilter = KumpulanKitabSearchFilter.CHAPTERS },
-                        label = { Text("📖 Bab (${allSections.size})", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = DeepEmeraldPrimary,
-                            selectedLabelColor = Color.White
-                        ),
-                        modifier = Modifier.testTag("chip_filter_chapters")
-                    )
-
-                    // Garis Pemisah Kecil
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(18.dp)
-                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-                    )
-
-                    // Kata Kunci Cepat (Quick Suggestions)
-                    val quickTopics = listOf("Wahyu", "Iman", "Sholat", "Zakat", "Puasa", "Adab", "Bukhari", "Muslim")
-                    quickTopics.forEach { topic ->
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                            border = BorderStroke(0.6.dp, DeepEmeraldPrimary.copy(alpha = 0.25f)),
-                            modifier = Modifier
-                                .clickable {
-                                    searchQuery = topic
-                                    selectedFilter = KumpulanKitabSearchFilter.ALL
-                                }
-                                .testTag("chip_suggestion_$topic")
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = DeepEmeraldPrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Filter: \"$searchQuery\" (${filteredBooks.size} Kitab • ${filteredSections.size} Bab)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepEmeraldPrimary
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(
+                            onClick = onOpenSearchDialog,
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                         ) {
-                            Text(
-                                text = "#$topic",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = DeepEmeraldPrimary,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            Text("Ubah", fontSize = 11.sp, color = DeepEmeraldPrimary, fontWeight = FontWeight.Bold)
+                        }
+                        IconButton(
+                            onClick = onClearSearch,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = "Hapus Pencarian",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
@@ -783,8 +976,7 @@ private fun BooksBannerVerticalList(
                                 )
                                 Button(
                                     onClick = {
-                                        searchQuery = ""
-                                        selectedFilter = KumpulanKitabSearchFilter.ALL
+                                        onClearSearch()
                                     },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = DeepEmeraldPrimary
@@ -822,19 +1014,19 @@ private fun BooksBannerVerticalList(
                         )
                     }
                 } else {
-                    // Hero Intro Header
+                    // Hero Intro Header dengan Foto Cerah Ka'bah Makkah
                     item {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(160.dp)
-                                .padding(horizontal = 16.dp)
-                                .clip(RoundedCornerShape(22.dp))
+                                .height(150.dp)
+                                .padding(horizontal = 14.dp)
+                                .clip(RoundedCornerShape(20.dp))
                                 .testTag("kumpulan_kitab_hero_banner")
                         ) {
                             Image(
-                                painter = painterResource(id = R.drawable.img_gold_islamic_ornament_1791643531933),
-                                contentDescription = "Ornamen Kumpulan Kitab Hadits",
+                                painter = painterResource(id = R.drawable.img_makkah_bright_daylight_1791802483315),
+                                contentDescription = "Pemandangan Cerah Ka'bah Makkah",
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -844,9 +1036,9 @@ private fun BooksBannerVerticalList(
                                     .fillMaxSize()
                                     .background(
                                         Brush.verticalGradient(
-                                            0.0f to Color(0x770B1D3A),
-                                            0.6f to Color(0xCC09182C),
-                                            1.0f to Color(0xF2081324)
+                                            0.0f to Color(0x05000000),
+                                            0.35f to Color(0x28000000),
+                                            1.0f to Color(0xBF061810)
                                         )
                                     )
                             )
@@ -854,35 +1046,41 @@ private fun BooksBannerVerticalList(
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(18.dp),
-                                verticalArrangement = Arrangement.Center
+                                    .padding(14.dp),
+                                verticalArrangement = Arrangement.Bottom
                             ) {
                                 Surface(
-                                    shape = RoundedCornerShape(20.dp),
-                                    color = Color(0xFF38290D),
-                                    border = BorderStroke(1.dp, DeepGoldAccent),
-                                    modifier = Modifier.padding(bottom = 6.dp)
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = Color(0xCC000000),
+                                    border = BorderStroke(0.8.dp, DeepGoldAccent),
+                                    modifier = Modifier.padding(bottom = 4.dp)
                                 ) {
                                     Text(
-                                        text = "📚 Kutubus Sittah & Al-Muwatta",
+                                        text = "☀️ Kutubus Sittah & Al-Muwatta",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFFFFE89C),
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
                                     )
                                 }
 
                                 Text(
                                     text = "Kumpulan Kitab Hadits",
-                                    style = MaterialTheme.typography.titleLarge,
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        shadow = Shadow(
+                                            color = Color.Black.copy(alpha = 0.8f),
+                                            offset = Offset(0f, 1f),
+                                            blurRadius = 3f
+                                        )
+                                    ),
                                     fontWeight = FontWeight.Black,
                                     color = Color.White
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "Jelajahi karya-karya agung para imam hadits termasyhur. Gunakan bilah pencarian di atas untuk menemukan kitab atau bab spesifik secara instan.",
+                                    text = "Kitab induk hadits otentik para imam besar. Sentuh ikon kaca pembesar di atas untuk mencari bab spesifik secara praktis.",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.90f),
+                                    color = Color.White.copy(alpha = 0.95f),
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -943,10 +1141,10 @@ private fun SearchedSectionCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 14.dp, vertical = 3.dp)
             .clickable(onClick = onClick)
             .testTag("search_section_item_${book.id}_${section.sectionNumber}"),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -956,7 +1154,7 @@ private fun SearchedSectionCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(12.dp)
         ) {
             // Baris Atas: Label Kitab Asal & Rentang Hadits
             Row(
@@ -1055,8 +1253,8 @@ private fun SearchedSectionCard(
 }
 
 /**
- * Kartu Banner Kitab dengan Tombol Berdenyut (Game 3D Pulse)
- * Menampilkan nama kitab (misal Shahih Al-Bukhari) pada tombol berdenyut
+ * Kartu Banner Kitab Slim & Terang dengan Tombol Berdenyut (Game 3D Pulse)
+ * Menampilkan nama kitab dengan foto cerah Makkah / Madinah dan kartu yang slim & enak dipandang
  */
 @Composable
 private fun LuxuryBookBannerCard(
@@ -1066,162 +1264,108 @@ private fun LuxuryBookBannerCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 14.dp, vertical = 2.dp)
             .clickable { onClick() }
             .testTag("banner_book_${book.id}"),
-        shape = RoundedCornerShape(22.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        border = BorderStroke(1.2.dp, Color(book.badgeColorHex).copy(alpha = 0.65f))
+        shape = RoundedCornerShape(18.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        border = BorderStroke(1.dp, Color(book.badgeColorHex).copy(alpha = 0.55f))
     ) {
         Box(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(148.dp)
         ) {
-            // Background Image
+            // Background Image Terang (Makkah, Ka'bah, Nabawi, Masjidil Haram)
             if (book.imageRes != 0) {
                 Image(
                     painter = painterResource(id = book.imageRes),
                     contentDescription = book.title,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.matchParentSize()
+                    modifier = Modifier.fillMaxSize()
                 )
             }
 
-            // Darker Overlay Scrim for Maximum Text Readability
+            // Luminous Scrim Transparan Terang agar pemandangan cerah tetap terpancar
             Box(
                 modifier = Modifier
-                    .matchParentSize()
+                    .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            0.0f to Color(0xDE071424),
-                            0.45f to Color(0xF2091A30),
-                            1.0f to Color(0xFA050F1E)
+                            0.0f to Color(0x08000000),
+                            0.35f to Color(0x30000000),
+                            1.0f to Color(0xD0061810)
                         )
                     )
             )
 
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .fillMaxSize()
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Baris Atas: Badge Status Derajat, Estimasi Hadits, dan Jumlah Bab
+                // Baris Atas: Badge Status Derajat & Jumlah Bab / Hadits
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = Color(book.badgeColorHex).copy(alpha = 0.88f),
+                        border = BorderStroke(0.6.dp, Color.White.copy(alpha = 0.6f))
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = Color(book.badgeColorHex).copy(alpha = 0.35f),
-                            border = BorderStroke(0.8.dp, Color(book.badgeColorHex))
-                        ) {
-                            Text(
-                                text = book.gradeStatus,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = Color(0xFF2E2003),
-                            border = BorderStroke(0.8.dp, DeepGoldAccent)
-                        ) {
-                            Text(
-                                text = book.totalHadithEstimate,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFFFE082),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
-                        }
+                        Text(
+                            text = book.gradeStatus,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                        )
                     }
 
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = Color.White.copy(alpha = 0.12f)
+                        color = Color(0xCC000000),
+                        border = BorderStroke(0.6.dp, DeepGoldAccent.copy(alpha = 0.8f))
                     ) {
                         Text(
-                            text = "${book.sections.size} Bab Pilihan",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White.copy(alpha = 0.9f),
-                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                            text = "${book.sections.size} Bab • ${book.totalHadithEstimate}",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFFE082),
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
                         )
                     }
                 }
 
-                // Judul Kitab & Nama Imam Penyusun
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                // Baris Tengah: Judul Kitab & Nama Imam Penyusun
+                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text(
                         text = book.title,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontSize = 21.sp,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            shadow = Shadow(
+                                color = Color.Black.copy(alpha = 0.85f),
+                                offset = Offset(0f, 1f),
+                                blurRadius = 3f
+                            )
+                        ),
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Black,
                         color = Color.White
                     )
                     Text(
                         text = book.author,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFFFFD54F),
-                        fontWeight = FontWeight.SemiBold
+                        fontSize = 11.sp,
+                        color = Color(0xFFFFE082),
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                // Keterangan / Deskripsi Kitab
-                Text(
-                    text = book.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.88f),
-                    lineHeight = 18.sp,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                // Cuplikan Pilihan Bab di Dalam Kitab
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val previewCount = minOf(3, book.sections.size)
-                    for (i in 0 until previewCount) {
-                        val sec = book.sections[i]
-                        val shortName = sec.titleId.substringBefore(":").ifEmpty { "Bab ${sec.sectionNumber}" }
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color.White.copy(alpha = 0.10f),
-                            border = BorderStroke(0.6.dp, Color.White.copy(alpha = 0.25f))
-                        ) {
-                            Text(
-                                text = shortName,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White.copy(alpha = 0.85f),
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
-                            )
-                        }
-                    }
-                    if (book.sections.size > 3) {
-                        Text(
-                            text = "+${book.sections.size - 3} Bab lainnya",
-                            fontSize = 10.sp,
-                            color = Color(0xFFFFD54F).copy(alpha = 0.9f),
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                // TOMBOL BERDENYUT (Pulsing 3D Button) dengan nama kitab sesuai permintaan pengguna
+                // Baris Bawah: Tombol Berdenyut Slim (Pulsing 3D Capsule Button)
                 PulsingGameButton(
                     label = "✨ ${book.title} (Buka Pilihan Bab)",
                     onClick = onClick,
@@ -1233,8 +1377,8 @@ private fun LuxuryBookBannerCard(
 }
 
 /**
- * Tombol 3D Berdenyut (Game-Style Pulsing Capsule Button)
- * Berdenyut ritmis dengan animasi scale halus dan bingkai berpendar
+ * Tombol 3D Berdenyut Slim (Game-Style Pulsing Capsule Button)
+ * Berdenyut ritmis dengan ukuran slim elegan agar nyaman dipandang
  */
 @Composable
 private fun PulsingGameButton(
@@ -1245,8 +1389,8 @@ private fun PulsingGameButton(
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse_trans")
     val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.97f,
-        targetValue = 1.035f,
+        initialValue = 0.98f,
+        targetValue = 1.02f,
         animationSpec = infiniteRepeatable(
             animation = tween(900, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
@@ -1254,7 +1398,7 @@ private fun PulsingGameButton(
         label = "pulse_scale"
     )
     val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.45f,
+        initialValue = 0.5f,
         targetValue = 0.95f,
         animationSpec = infiniteRepeatable(
             animation = tween(900, easing = FastOutSlowInEasing),
@@ -1268,11 +1412,11 @@ private fun PulsingGameButton(
             .fillMaxWidth()
             .scale(pulseScale)
             .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(16.dp),
+                elevation = 6.dp,
+                shape = RoundedCornerShape(14.dp),
                 spotColor = Color(0xFFFFB300)
             )
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(
                 Brush.horizontalGradient(
                     listOf(
@@ -1284,12 +1428,12 @@ private fun PulsingGameButton(
                 )
             )
             .border(
-                1.5.dp,
+                1.2.dp,
                 Color(0xFFFFF9C4).copy(alpha = glowAlpha),
-                RoundedCornerShape(16.dp)
+                RoundedCornerShape(14.dp)
             )
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 14.dp, vertical = 7.dp)
             .testTag(testTag),
         contentAlignment = Alignment.Center
     ) {
@@ -1300,24 +1444,18 @@ private fun PulsingGameButton(
             Text(
                 text = label,
                 color = Color(0xFF2E1700),
-                style = MaterialTheme.typography.titleSmall.copy(
-                    shadow = Shadow(
-                        color = Color.White.copy(alpha = 0.6f),
-                        offset = Offset(0f, 1f),
-                        blurRadius = 1f
-                    )
-                ),
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 0.3.sp,
+                letterSpacing = 0.2.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(4.dp))
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
                 tint = Color(0xFF2E1700),
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(14.dp)
             )
         }
     }
@@ -1652,6 +1790,7 @@ private fun OnlineHadithDetailList(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
 
     var isLoading by remember { mutableStateOf(false) }
@@ -1706,7 +1845,7 @@ private fun OnlineHadithDetailList(
         }
         val clip = ClipData.newPlainText("Hadits #${item.number}", text)
         clipboard.setPrimaryClip(clip)
-        Toast.makeText(context, "Hadits #${item.number} disalin ke papan klip", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "📋 Hadits #${item.number} berhasil disalin ke papan klip", Toast.LENGTH_SHORT).show()
     }
 
     val shareOnlineItem: (HadithParsedItem) -> Unit = { item ->
@@ -1828,6 +1967,34 @@ private fun OnlineHadithDetailList(
                 )
             }
 
+            // Copy Hint Banner
+            if (!isLoading && errorMessage == null && displayHadiths.isNotEmpty()) {
+                item {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 2.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        color = DeepEmeraldPrimary.copy(alpha = 0.08f),
+                        border = BorderStroke(0.6.dp, DeepEmeraldPrimary.copy(alpha = 0.2f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text("💡", fontSize = 13.sp)
+                            Text(
+                                text = "Sentuh tombol 'Salin' atau tekan lama kartu hadits untuk menyalin teks.",
+                                fontSize = 11.sp,
+                                color = DeepEmeraldPrimary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            }
+
             // Loading State
             if (isLoading) {
                 item {
@@ -1943,8 +2110,16 @@ private fun OnlineHadithDetailList(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)
-                            .testTag("online_hadith_item_${item.number}"),
-                        shape = RoundedCornerShape(18.dp),
+                            .testTag("online_hadith_item_${item.number}")
+                            .pointerInput(item.number) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        copyOnlineItem(item)
+                                    }
+                                )
+                            },
+                        shape = RoundedCornerShape(14.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                         border = BorderStroke(1.dp, DeepEmeraldPrimary.copy(alpha = 0.25f))
@@ -1952,7 +2127,7 @@ private fun OnlineHadithDetailList(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp)
+                                .padding(horizontal = 12.dp, vertical = 10.dp)
                         ) {
                             // Header Row
                             Row(
@@ -1967,12 +2142,12 @@ private fun OnlineHadithDetailList(
                                     Surface(
                                         shape = CircleShape,
                                         color = MaterialTheme.colorScheme.surfaceVariant,
-                                        modifier = Modifier.size(28.dp)
+                                        modifier = Modifier.size(24.dp)
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
                                             Text(
                                                 text = "#${item.number}",
-                                                fontSize = 11.sp,
+                                                fontSize = 10.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -1982,6 +2157,7 @@ private fun OnlineHadithDetailList(
                                     Text(
                                         text = "${item.bookName} • No. ${item.number}",
                                         style = MaterialTheme.typography.titleSmall,
+                                        fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
@@ -2001,42 +2177,43 @@ private fun OnlineHadithDetailList(
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
 
-                            // Arabic Box
+                            // Arabic Box Slim
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(10.dp),
                                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
                                 border = BorderStroke(0.6.dp, DeepEmeraldPrimary.copy(alpha = 0.15f))
                             ) {
                                 Text(
                                     text = item.arabicText,
-                                    fontSize = 20.sp,
-                                    lineHeight = 36.sp,
+                                    fontSize = 18.sp,
+                                    lineHeight = 30.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     textAlign = TextAlign.End,
-                                    modifier = Modifier.padding(14.dp)
+                                    modifier = Modifier.padding(10.dp)
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
 
-                            // Indonesian Translation
+                            // Indonesian Translation Slim
                             Text(
                                 text = item.indonesianText,
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 13.5.sp,
                                 color = MaterialTheme.colorScheme.onSurface,
-                                lineHeight = 22.sp,
+                                lineHeight = 20.sp,
                                 modifier = Modifier.padding(horizontal = 2.dp)
                             )
 
-                            Spacer(modifier = Modifier.height(12.dp))
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
                             Spacer(modifier = Modifier.height(8.dp))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                            Spacer(modifier = Modifier.height(6.dp))
 
-                            // Action Toolbar Row
+                            // Action Toolbar Row Slim
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -2054,19 +2231,19 @@ private fun OnlineHadithDetailList(
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = if (isPlayingThis) Color(0xFFD32F2F) else DeepEmeraldPrimary
                                     ),
-                                    shape = RoundedCornerShape(20.dp),
-                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                    shape = RoundedCornerShape(18.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 5.dp)
                                 ) {
                                     Icon(
                                         imageVector = if (isPlayingThis) Icons.Default.Stop else Icons.AutoMirrored.Filled.VolumeUp,
                                         contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
+                                        modifier = Modifier.size(15.dp),
                                         tint = Color.White
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = if (isPlayingThis) "Hentikan" else "Dengarkan",
-                                        fontSize = 12.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White
                                     )
@@ -2076,27 +2253,42 @@ private fun OnlineHadithDetailList(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    IconButton(
-                                        onClick = { copyOnlineItem(item) },
-                                        modifier = Modifier.size(36.dp)
+                                    // Dedicated Copy Button Slim
+                                    FilledTonalButton(
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            copyOnlineItem(item)
+                                        },
+                                        colors = ButtonDefaults.filledTonalButtonColors(
+                                            containerColor = DeepEmeraldPrimary.copy(alpha = 0.12f),
+                                            contentColor = DeepEmeraldPrimary
+                                        ),
+                                        shape = RoundedCornerShape(18.dp),
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp),
+                                        modifier = Modifier.testTag("btn_copy_online_hadith_${item.number}")
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.ContentCopy,
                                             contentDescription = "Salin Hadits",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "Salin",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                     }
 
                                     IconButton(
                                         onClick = { shareOnlineItem(item) },
-                                        modifier = Modifier.size(36.dp)
+                                        modifier = Modifier.size(32.dp)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Share,
                                             contentDescription = "Bagikan Hadits",
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(16.dp)
                                         )
                                     }
                                 }
@@ -2176,7 +2368,7 @@ private fun TematikHaditsView(
         }
         val clip = ClipData.newPlainText(hadits.title, text)
         clipboard.setPrimaryClip(clip)
-        Toast.makeText(context, "Hadits berhasil disalin ke papan klip", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "📋 Hadits berhasil disalin ke papan klip", Toast.LENGTH_SHORT).show()
     }
 
     val shareHadits: (HaditsItem) -> Unit = { hadits ->
@@ -2548,6 +2740,31 @@ private fun TematikHaditsView(
                 }
             }
         } else {
+            item {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 2.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    color = DeepEmeraldPrimary.copy(alpha = 0.08f),
+                    border = BorderStroke(0.6.dp, DeepEmeraldPrimary.copy(alpha = 0.2f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("💡", fontSize = 13.sp)
+                        Text(
+                            text = "Sentuh tombol 'Salin' atau tekan lama kartu hadits untuk menyalin teks lengkap.",
+                            fontSize = 11.sp,
+                            color = DeepEmeraldPrimary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
             items(filteredHadits, key = { it.id }) { hadits ->
                 val isPlayingThis = isPlaying && currentlyPlayingId == hadits.id
                 val isBookmarked = bookmarkedIds.contains(hadits.id)
@@ -2629,6 +2846,7 @@ private fun HaditsItemCard(
     onCopy: () -> Unit,
     onShare: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     var isExpanded by remember { mutableStateOf(false) }
 
     Card(
@@ -2636,7 +2854,15 @@ private fun HaditsItemCard(
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .animateContentSize()
-            .testTag("hadits_card_${hadits.id}"),
+            .testTag("hadits_card_${hadits.id}")
+            .pointerInput(hadits.id) {
+                detectTapGestures(
+                    onLongPress = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onCopy()
+                    }
+                )
+            },
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -2891,17 +3117,32 @@ private fun HaditsItemCard(
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    IconButton(
-                        onClick = onCopy,
-                        modifier = Modifier.size(36.dp)
+                    // Dedicated Copy Button
+                    FilledTonalButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onCopy()
+                        },
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = DeepEmeraldPrimary.copy(alpha = 0.12f),
+                            contentColor = DeepEmeraldPrimary
+                        ),
+                        shape = RoundedCornerShape(20.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.testTag("btn_copy_hadits_${hadits.id}")
                     ) {
                         Icon(
                             imageVector = Icons.Default.ContentCopy,
                             contentDescription = "Salin Teks Hadits",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text = "Salin",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
 
