@@ -46,7 +46,7 @@ metaAudienceNetwork = "6.18.0"
 playServicesAdsIdentifier = "18.1.0"
 playServicesAppset = "16.0.2"
 playAppUpdate = "2.1.0"
-playBilling = "7.1.1"
+playBilling = "8.0.0"
 fragmentKtx = "1.8.6"
 
 

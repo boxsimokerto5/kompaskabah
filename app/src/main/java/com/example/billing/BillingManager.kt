@@ -168,8 +168,9 @@ object BillingManager : PurchasesUpdatedListener {
             .setProductList(productList)
             .build()
 
-        client.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
+        client.queryProductDetailsAsync(params) { billingResult, queryProductDetailsResult ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                val productDetailsList = queryProductDetailsResult.productDetailsList
                 Log.d(TAG, "Products queried successfully. Found ${productDetailsList.size} subscription products.")
                 if (productDetailsList.isNotEmpty()) {
                     val primary = productDetailsList.firstOrNull { it.productId == SUBSCRIPTION_MONTHLY_ID }
