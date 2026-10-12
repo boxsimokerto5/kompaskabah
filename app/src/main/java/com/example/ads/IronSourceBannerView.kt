@@ -33,6 +33,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.ironsource.mediationsdk.ISBannerSize
 import com.ironsource.mediationsdk.IronSourceBannerLayout
 
+import androidx.compose.runtime.collectAsState
+import com.example.billing.BillingManager
+
 /**
  * Composable that displays an ironSource LevelPlay Banner ad (with Meta Audience Network mediation).
  * Height standard banner is 50.dp.
@@ -43,6 +46,12 @@ fun IronSourceBannerAd(
     placementName: String = IronSourceAdManager.BANNER_UNIT_ID,
     bannerSize: ISBannerSize = ISBannerSize.BANNER
 ) {
+    val isSubscribed by BillingManager.isSubscribed.collectAsState()
+    if (isSubscribed) {
+        // User has active Ad-Free subscription. Completely hide banner space.
+        return
+    }
+
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
 

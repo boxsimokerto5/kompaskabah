@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Policy
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
@@ -51,6 +52,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -73,6 +75,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.billing.BillingManager
 import com.example.data.AppLanguageManager
 
 @Composable
@@ -89,6 +92,13 @@ fun SettingsInfoScreen(
     var selectedRating by remember { mutableIntStateOf(5) }
     var hasRated by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
+    var showSubscriptionDialog by remember { mutableStateOf(false) }
+
+    if (showSubscriptionDialog) {
+        MonthlySubscriptionDialog(
+            onDismiss = { showSubscriptionDialog = false }
+        )
+    }
 
     if (showLanguageDialog) {
         LanguageSelectionDialog(
@@ -255,6 +265,124 @@ fun SettingsInfoScreen(
                                     fontSize = 11.sp
                                 )
                             }
+                        }
+                    }
+                }
+            }
+
+            // 1.2. Langganan Bebas Iklan Bulanan (Monthly Ad-Free Subscription)
+            item {
+                val isSubscribed by BillingManager.isSubscribed.collectAsState()
+                val formattedPrice by BillingManager.formattedPrice.collectAsState()
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("card_ad_free_subscription"),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isSubscribed) Color(0xFF163E2D).copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface
+                    ),
+                    border = BorderStroke(
+                        1.5.dp,
+                        if (isSubscribed) Color(0xFF2E7D32) else Color(0xFFD4AF37)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(18.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(
+                                        Brush.linearGradient(
+                                            if (isSubscribed) listOf(Color(0xFF2E7D32), Color(0xFF1B5E20))
+                                            else listOf(Color(0xFFFFDF73), Color(0xFFD4AF37))
+                                        ),
+                                        CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isSubscribed) Icons.Default.CheckCircle else Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = if (isSubscribed) Color.White else Color(0xFF3E2723),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "Bebas Iklan Bulanan",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = if (isSubscribed) Color(0xFF1B5E20) else Color(0xFFD4AF37).copy(alpha = 0.2f),
+                                        border = BorderStroke(0.8.dp, if (isSubscribed) Color(0xFF2E7D32) else Color(0xFFD4AF37))
+                                    ) {
+                                        Text(
+                                            text = if (isSubscribed) "AKTIF" else "VIP",
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isSubscribed) Color.White else Color(0xFF8B6508)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = if (isSubscribed)
+                                        "Semua iklan dinonaktifkan (Google Play)"
+                                    else
+                                        "Mulai $formattedPrice",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (isSubscribed) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = if (isSubscribed)
+                                "Alhamdulillah! Ibadah Anda bebas dari seluruh iklan interstitial (jeda 15 klik), video berhadiah peta masjid, dan banner bawah."
+                            else
+                                "Nikmati ibadah sholat dan dzikir tanpa gangguan iklan sama sekali. Langganan bulanan resmi melalui Google Play Store, bisa dibatalkan kapan saja.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            lineHeight = 17.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Button(
+                            onClick = { showSubscriptionDialog = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp)
+                                .testTag("btn_open_subscription_sheet"),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isSubscribed) Color(0xFF1B5E20) else Color(0xFF0F3826)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Color(0xFFD4AF37).copy(alpha = 0.7f))
+                        ) {
+                            Icon(
+                                imageVector = if (isSubscribed) Icons.Default.Settings else Icons.Default.Star,
+                                contentDescription = null,
+                                tint = Color(0xFFFFDF73),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isSubscribed) "Kelola Langganan Google Play" else "Berlangganan Bebas Iklan",
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
                         }
                     }
                 }

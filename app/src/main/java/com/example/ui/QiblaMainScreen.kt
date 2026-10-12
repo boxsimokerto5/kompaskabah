@@ -22,6 +22,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -66,6 +67,7 @@ import androidx.compose.material.icons.filled.NorthEast
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.WarningAmber
@@ -120,12 +122,16 @@ import com.example.service.AdhanPlaybackState
 import com.example.ui.components.AmalanScreen
 import com.example.ui.components.DigitalTasbihScreen
 import com.example.ui.components.IslamicCalendarScreen
+import com.example.ui.components.MonthlySubscriptionDialog
+import com.example.ui.components.PermissionDeclarationSheet
 import com.example.ui.components.NearbyMosquesScreen
 import com.example.ui.components.PrayerTimesScreen
 import com.example.ui.components.SettingsInfoScreen
 import com.example.ui.components.QiblaArrowScreen
 import com.example.ui.components.QiblaCompassCanvas
 import com.example.ui.components.SensorDiagnosticsScreen
+import com.example.billing.BillingManager
+import androidx.compose.runtime.collectAsState
 import com.example.ui.theme.AlignedEmerald
 import com.example.ui.theme.AlignedEmeraldGlow
 import com.example.ui.theme.CharcoalText
@@ -167,6 +173,47 @@ fun QiblaMainScreen(
 ) {
     val context = LocalContext.current
     var showSettingsScreen by remember { mutableStateOf(false) }
+    var showSubscriptionDialog by remember { mutableStateOf(false) }
+    var showPermissionDeclarationSheet by remember { mutableStateOf(false) }
+
+    val permissionsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val locGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        onPermissionResult(locGranted)
+    }
+
+    if (showSubscriptionDialog) {
+        MonthlySubscriptionDialog(
+            onDismiss = { showSubscriptionDialog = false }
+        )
+    }
+
+    if (showPermissionDeclarationSheet) {
+        val needsNotifPerm = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+
+        PermissionDeclarationSheet(
+            onDismiss = { showPermissionDeclarationSheet = false },
+            onConfirmAndRequest = {
+                showPermissionDeclarationSheet = false
+                val perms = buildList {
+                    add(Manifest.permission.ACCESS_FINE_LOCATION)
+                    add(Manifest.permission.ACCESS_COARSE_LOCATION)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        add(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                }.toTypedArray()
+                permissionsLauncher.launch(perms)
+            },
+            hasLocationPermission = uiState.hasLocationPermission,
+            needsNotificationPermission = needsNotifPerm
+        )
+    }
 
     if (showSettingsScreen) {
         SettingsInfoScreen(
@@ -183,34 +230,19 @@ fun QiblaMainScreen(
         }
     }
 
-    val permissionsLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val locGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        onPermissionResult(locGranted)
-    }
-
     val triggerGpsRefreshOrRequest: () -> Unit = {
         if (uiState.hasLocationPermission) {
             onRefreshGps()
         } else {
-            val perms = buildList {
-                add(Manifest.permission.ACCESS_FINE_LOCATION)
-                add(Manifest.permission.ACCESS_COARSE_LOCATION)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    add(Manifest.permission.POST_NOTIFICATIONS)
-                }
-            }.toTypedArray()
-            permissionsLauncher.launch(perms)
+            showPermissionDeclarationSheet = true
         }
     }
 
-    // Automatically request location + notification permissions on first launch
-    var hasAutoRequestedPermissions by remember { mutableStateOf(false) }
+    // Automatically trigger permission declaration sheet on first launch if permissions are needed
+    var hasCheckedStartupPermissions by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        if (!hasAutoRequestedPermissions) {
-            hasAutoRequestedPermissions = true
+        if (!hasCheckedStartupPermissions) {
+            hasCheckedStartupPermissions = true
             val needsNotifPerm = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                     ContextCompat.checkSelfPermission(
                         context,
@@ -218,14 +250,7 @@ fun QiblaMainScreen(
                     ) != PackageManager.PERMISSION_GRANTED
 
             if (!uiState.hasLocationPermission || needsNotifPerm) {
-                val perms = buildList {
-                    add(Manifest.permission.ACCESS_FINE_LOCATION)
-                    add(Manifest.permission.ACCESS_COARSE_LOCATION)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        add(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                }.toTypedArray()
-                permissionsLauncher.launch(perms)
+                showPermissionDeclarationSheet = true
             } else {
                 onRefreshGps()
             }
@@ -311,6 +336,9 @@ fun QiblaMainScreen(
                                 onOpenSettings = {
                                     IronSourceAdManager.recordClick(context)
                                     showSettingsScreen = true
+                                },
+                                onOpenSubscription = {
+                                    showSubscriptionDialog = true
                                 },
                                 onManualRotate = onManualRotate,
                                 onSnapToQibla = onSnapToQibla,
@@ -413,7 +441,8 @@ fun QiblaMainScreen(
                                     uiState = uiState,
                                     onRequestGpsClick = triggerGpsRefreshOrRequest,
                                     onToggleHaptic = { onToggleHaptic(!uiState.hapticFeedbackEnabled) },
-                                    onOpenSettings = { showSettingsScreen = true }
+                                    onOpenSettings = { showSettingsScreen = true },
+                                    onOpenSubscription = { showSubscriptionDialog = true }
                                 )
                                 SensorDiagnosticsScreen(
                                     uiState = uiState,
@@ -538,8 +567,10 @@ private fun TopQiblaHeaderBar(
     uiState: QiblaUiState,
     onRequestGpsClick: () -> Unit,
     onToggleHaptic: () -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    onOpenSubscription: () -> Unit = {}
 ) {
+    val isSubscribed by BillingManager.isSubscribed.collectAsState()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -611,6 +642,17 @@ private fun TopQiblaHeaderBar(
             }
 
             IconButton(
+                onClick = onOpenSubscription,
+                modifier = Modifier.testTag("btn_ad_free_header")
+            ) {
+                Icon(
+                    imageVector = if (isSubscribed) Icons.Default.CheckCircle else Icons.Default.Star,
+                    contentDescription = "Bebas Iklan",
+                    tint = if (isSubscribed) Color(0xFF2E7D32) else Color(0xFFD4AF37)
+                )
+            }
+
+            IconButton(
                 onClick = onOpenSettings,
                 modifier = Modifier.testTag("settings_header_button")
             ) {
@@ -631,6 +673,7 @@ private fun CompassDashboardContent(
     onRequestGpsClick: () -> Unit,
     onToggleHaptic: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenSubscription: () -> Unit = {},
     onManualRotate: (Float) -> Unit,
     onSnapToQibla: () -> Unit,
     onResumeSensor: () -> Unit,
@@ -646,7 +689,8 @@ private fun CompassDashboardContent(
                 uiState = uiState,
                 onRequestGpsClick = onRequestGpsClick,
                 onToggleHaptic = onToggleHaptic,
-                onOpenSettings = onOpenSettings
+                onOpenSettings = onOpenSettings,
+                onOpenSubscription = onOpenSubscription
             )
 
             Row(
@@ -702,7 +746,8 @@ private fun CompassDashboardContent(
                 uiState = uiState,
                 onRequestGpsClick = onRequestGpsClick,
                 onToggleHaptic = onToggleHaptic,
-                onOpenSettings = onOpenSettings
+                onOpenSettings = onOpenSettings,
+                onOpenSubscription = onOpenSubscription
             )
 
             Column(
@@ -748,8 +793,10 @@ private fun FullWidthKaabaDaylightHero(
     uiState: QiblaUiState,
     onRequestGpsClick: () -> Unit,
     onToggleHaptic: () -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    onOpenSubscription: () -> Unit = {}
 ) {
+    val isSubscribed by BillingManager.isSubscribed.collectAsState()
     val pageBackgroundColor = MaterialTheme.colorScheme.background
 
     Box(
@@ -875,6 +922,25 @@ private fun FullWidthKaabaDaylightHero(
                                     CharcoalText.copy(alpha = 0.38f)
                                 },
                                 modifier = Modifier.size(19.dp)
+                            )
+                        }
+                    }
+
+                    Surface(
+                        onClick = onOpenSubscription,
+                        shape = CircleShape,
+                        color = if (isSubscribed) Color(0xFFFFDF73) else Color.White.copy(alpha = 0.9f),
+                        border = BorderStroke(1.2.dp, Color(0xFFD4AF37)),
+                        modifier = Modifier
+                            .size(38.dp)
+                            .testTag("ad_free_vip_hero_button")
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = if (isSubscribed) Icons.Default.CheckCircle else Icons.Default.Star,
+                                contentDescription = "Bebas Iklan",
+                                tint = if (isSubscribed) Color(0xFF1B5E20) else Color(0xFFD4AF37),
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }

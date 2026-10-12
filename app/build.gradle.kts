@@ -154,6 +154,7 @@ dependencies {
   implementation(libs.play.services.ads.identifier)
   implementation(libs.play.services.appset)
   implementation(libs.play.app.update)
+  implementation(libs.play.billing.ktx)
   // implementation(libs.retrofit)
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)

@@ -22,6 +22,7 @@ import com.example.ui.QiblaViewModel
 import com.example.ui.components.LanguageSelectionDialog
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ads.IronSourceAdManager
+import com.example.billing.BillingManager
 import com.example.update.GooglePlayUpdateManager
 import com.example.widget.QiblaPrayerWidgetProvider
 
@@ -37,6 +38,9 @@ class MainActivity : ComponentActivity() {
 
         // Initialize ironSource LevelPlay SDK with Meta Audience Network
         IronSourceAdManager.init(this)
+
+        // Initialize Google Play Billing for Monthly Ad-Free Subscription
+        BillingManager.init(this)
 
         // Initialize official Google Play In-App Updates (backend service)
         playUpdateManager = GooglePlayUpdateManager(this)
@@ -138,6 +142,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         IronSourceAdManager.onResume(this)
+        BillingManager.queryActivePurchases()
         playUpdateManager.onResume()
     }
 

@@ -75,7 +75,11 @@ class GooglePlayUpdateManager(
         }
 
         // Register listener for flexible background download status
-        appUpdateManager.registerListener(installStateUpdatedListener)
+        try {
+            appUpdateManager.registerListener(installStateUpdatedListener)
+        } catch (e: Exception) {
+            Log.d(TAG, "Notice: In-app update listener not active: ${e.message}")
+        }
     }
 
     /**
@@ -84,30 +88,34 @@ class GooglePlayUpdateManager(
      * or FLEXIBLE (background download followed by automatic installation).
      */
     fun checkForUpdates() {
-        val appUpdateInfoTask = appUpdateManager.appUpdateInfo
+        try {
+            val appUpdateInfoTask = appUpdateManager.appUpdateInfo
 
-        appUpdateInfoTask.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
-            val availability = appUpdateInfo.updateAvailability()
-            Log.d(TAG, "Update availability: $availability, availableVersionCode: ${appUpdateInfo.availableVersionCode()}")
+            appUpdateInfoTask.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
+                val availability = appUpdateInfo.updateAvailability()
+                Log.d(TAG, "Update availability: $availability, availableVersionCode: ${appUpdateInfo.availableVersionCode()}")
 
-            if (availability == UpdateAvailability.UPDATE_AVAILABLE) {
-                // Priority 1: Check if Immediate update is allowed
-                if (appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
-                    Log.d(TAG, "Starting Immediate update flow...")
+                if (availability == UpdateAvailability.UPDATE_AVAILABLE) {
+                    // Priority 1: Check if Immediate update is allowed
+                    if (appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
+                        Log.d(TAG, "Starting Immediate update flow...")
+                        startUpdateFlow(appUpdateInfo, AppUpdateType.IMMEDIATE)
+                    }
+                    // Priority 2: Check if Flexible update is allowed
+                    else if (appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)) {
+                        Log.d(TAG, "Starting Flexible update flow...")
+                        startUpdateFlow(appUpdateInfo, AppUpdateType.FLEXIBLE)
+                    }
+                } else if (availability == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
+                    // If update is already in progress, resume it
+                    Log.d(TAG, "Resuming developer-triggered update in progress...")
                     startUpdateFlow(appUpdateInfo, AppUpdateType.IMMEDIATE)
                 }
-                // Priority 2: Check if Flexible update is allowed
-                else if (appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)) {
-                    Log.d(TAG, "Starting Flexible update flow...")
-                    startUpdateFlow(appUpdateInfo, AppUpdateType.FLEXIBLE)
-                }
-            } else if (availability == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
-                // If update is already in progress, resume it
-                Log.d(TAG, "Resuming developer-triggered update in progress...")
-                startUpdateFlow(appUpdateInfo, AppUpdateType.IMMEDIATE)
+            }.addOnFailureListener { exception ->
+                Log.d(TAG, "Check for update failed or Google Play not available: ${exception.message}")
             }
-        }.addOnFailureListener { exception ->
-            Log.d(TAG, "Check for update failed or Google Play not available: ${exception.message}")
+        } catch (e: Exception) {
+            Log.d(TAG, "Notice: Check for updates skipped: ${e.message}")
         }
     }
 

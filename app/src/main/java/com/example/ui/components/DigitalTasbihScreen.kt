@@ -62,10 +62,12 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.VolumeMute
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.runtime.collectAsState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -160,6 +162,11 @@ fun DigitalTasbihScreen(
     var showDzikirSheet by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showSujudVirtueDialog by remember { mutableStateOf(false) }
+    var showSubscriptionDialog by remember { mutableStateOf(false) }
+
+    if (showSubscriptionDialog) {
+        MonthlySubscriptionDialog(onDismiss = { showSubscriptionDialog = false })
+    }
 
     val currentPreset = remember(tasbihState.selectedDzikirIndex) {
         TasbihPresets.presets.getOrElse(tasbihState.selectedDzikirIndex) { TasbihPresets.presets.first() }
@@ -193,17 +200,18 @@ fun DigitalTasbihScreen(
             onNavigateBack = onNavigateBack,
             onOpenDzikirList = { showDzikirSheet = true },
             onOpenThemes = { showThemeDialog = true },
-            onResetClick = { showResetDialog = true }
+            onResetClick = { showResetDialog = true },
+            onOpenSubscription = { showSubscriptionDialog = true }
         )
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // 1. TOP GRAND MOSQUE SUJUD HERO IMAGE (USER EXPLICIT REQUIREMENT)
+            // 1. TOP GRAND MOSQUE SUJUD HERO IMAGE (FULL WIDTH EDGE-TO-EDGE WITH SMOOTH GRADIENT)
             GrandMosqueSujudHeroBanner(
                 onClickVirtue = { showSujudVirtueDialog = true }
             )
@@ -255,7 +263,7 @@ fun DigitalTasbihScreen(
             IronSourceBannerAd(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .padding(horizontal = 12.dp, vertical = 2.dp)
             )
         }
     }
@@ -334,8 +342,10 @@ private fun TasbihTopAppBar(
     onNavigateBack: () -> Unit,
     onOpenDzikirList: () -> Unit,
     onOpenThemes: () -> Unit,
-    onResetClick: () -> Unit
+    onResetClick: () -> Unit,
+    onOpenSubscription: () -> Unit = {}
 ) {
+    val isSubscribed by com.example.billing.BillingManager.isSubscribed.collectAsState()
     Surface(
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
@@ -383,6 +393,17 @@ private fun TasbihTopAppBar(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 IconButton(
+                    onClick = onOpenSubscription,
+                    modifier = Modifier.testTag("tasbih_ad_free_button")
+                ) {
+                    Icon(
+                        imageVector = if (isSubscribed) Icons.Default.CheckCircle else Icons.Default.Star,
+                        contentDescription = "Bebas Iklan",
+                        tint = if (isSubscribed) AlignedEmerald else DeepGoldAccent
+                    )
+                }
+
+                IconButton(
                     onClick = onOpenThemes,
                     modifier = Modifier.testTag("tasbih_theme_button")
                 ) {
@@ -410,131 +431,118 @@ private fun TasbihTopAppBar(
 
 /**
  * Top Grand Mosque Sujud Hero Banner:
- * Displays a magnificent image of someone performing sujud in prayer inside a grand mosque
- * with majestic arches, marble floors, ornate domes, and hadith on the virtue of sujud.
+ * Displays an edge-to-edge full width image of someone performing sujud in prayer
+ * inside a magnificent grand mosque with cinematic smooth gradient fading into the page.
  */
 @Composable
 private fun GrandMosqueSujudHeroBanner(
     onClickVirtue: () -> Unit
 ) {
-    Card(
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkCardSurface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        border = BorderStroke(1.2.dp, DeepGoldAccent.copy(alpha = 0.55f)),
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .height(165.dp)
             .clickable(onClick = onClickVirtue)
             .testTag("grand_mosque_sujud_hero_card")
     ) {
+        // Photo of someone in sujud inside the grand mosque (fills full width edge-to-edge)
+        Image(
+            painter = painterResource(id = R.drawable.img_sujud_grand_mosque_1791732157493),
+            contentDescription = "Seseorang sedang sujud sholat di dalam masjid yang megah",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Cinematic smooth vertical gradient fading seamlessly into background
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(215.dp)
-        ) {
-            // Photo of someone in sujud inside the grand mosque
-            Image(
-                painter = painterResource(id = R.drawable.img_sujud_grand_mosque_1791732157493),
-                contentDescription = "Seseorang sedang sujud sholat di dalam masjid yang megah",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-
-            // Cinematic gradient overlay from top and bottom
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Black.copy(alpha = 0.45f),
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.88f)
-                            )
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.50f),
+                            Color.Black.copy(alpha = 0.12f),
+                            Color.Black.copy(alpha = 0.65f),
+                            MaterialTheme.colorScheme.background
                         )
                     )
-            )
+                )
+        )
 
-            // Top badge: Sujud di Dalam Masjid yang Megah
+        // Top badge & info button in a single row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 8.dp)
+                .align(Alignment.TopCenter),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Row(
                 modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(12.dp)
                     .background(
                         color = Color.Black.copy(alpha = 0.65f),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(10.dp)
                     )
                     .border(
-                        width = 1.dp,
-                        color = DeepGoldAccent.copy(alpha = 0.85f),
-                        shape = RoundedCornerShape(12.dp)
+                        width = 0.8.dp,
+                        color = DeepGoldAccent.copy(alpha = 0.8f),
+                        shape = RoundedCornerShape(10.dp)
                     )
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
             ) {
+                Text(text = "🕌", fontSize = 11.sp)
                 Text(
-                    text = "🕌",
-                    fontSize = 13.sp
-                )
-                Text(
-                    text = "Sujud Sholat di Dalam Masjid yang Megah",
-                    fontSize = 11.5.sp,
+                    text = "Sujud Sholat di Masjid Megah",
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
             }
 
-            // Info button top right with tooltip
             Surface(
                 shape = CircleShape,
-                color = Color.Black.copy(alpha = 0.55f),
-                border = BorderStroke(0.8.dp, DeepGoldAccent.copy(alpha = 0.6f)),
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(10.dp)
+                color = Color.Black.copy(alpha = 0.60f),
+                border = BorderStroke(0.8.dp, DeepGoldAccent.copy(alpha = 0.7f))
             ) {
                 IconButton(
                     onClick = onClickVirtue,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(30.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = "Informasi Keutamaan Sujud & Dzikir",
-                        tint = DeepGoldAccent
+                        tint = DeepGoldAccent,
+                        modifier = Modifier.size(17.dp)
                     )
                 }
             }
+        }
 
-            // Bottom text: Hadith on Sujud and spiritual reflection
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
-            ) {
-                Text(
-                    text = "أَقْرَبُ مَا يَكُونُ الْعَبْدُ مِنْ رَبِّهِ وَهُوَ سَاجِدٌ فَأَكْثِرُوا الدُّعَاءَ",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = DeepGoldAccent,
-                    fontFamily = FontFamily.Serif
-                )
-                Text(
-                    text = "\"Sedekat-dekatnya seorang hamba kepada Rabb-nya adalah ketika ia sedang sujud, maka perbanyaklah doa.\" (HR. Muslim No. 482)",
-                    fontSize = 11.5.sp,
-                    color = Color.White.copy(alpha = 0.95f),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "Sentuh untuk membaca kemuliaan sujud & rahasia tasbih ℹ️",
-                    fontSize = 10.sp,
-                    color = DeepGoldAccent.copy(alpha = 0.85f),
-                    fontWeight = FontWeight.Medium
-                )
-            }
+        // Bottom text: Hadith on Sujud and spiritual reflection
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp)
+        ) {
+            Text(
+                text = "أَقْرَبُ مَا يَكُونُ الْعَبْدُ مِنْ رَبِّهِ وَهُوَ سَاجِدٌ",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = DeepGoldAccent,
+                fontFamily = FontFamily.Serif
+            )
+            Text(
+                text = "\"Sedekat-dekatnya seorang hamba kepada Rabb-nya adalah ketika ia sujud...\" (HR. Muslim)",
+                fontSize = 11.sp,
+                color = Color.White.copy(alpha = 0.95f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -548,23 +556,23 @@ private fun ActiveDzikirCard(
     onOpenDzikirSelector: () -> Unit
 ) {
     Card(
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
         ),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 12.dp)
             .clickable(onClick = onOpenDzikirSelector)
             .testTag("active_dzikir_info_card")
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(horizontal = 12.dp, vertical = 9.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -573,7 +581,7 @@ private fun ActiveDzikirCard(
             ) {
                 Text(
                     text = "LAFADZ DZIKIR",
-                    fontSize = 10.sp,
+                    fontSize = 9.5.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp,
                     color = MaterialTheme.colorScheme.primary
@@ -585,7 +593,7 @@ private fun ActiveDzikirCard(
                 ) {
                     Text(
                         text = "Ganti Dzikir ▾",
-                        fontSize = 11.sp,
+                        fontSize = 10.5.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
@@ -596,18 +604,18 @@ private fun ActiveDzikirCard(
             // Arabic text
             Text(
                 text = preset.arabic,
-                fontSize = 24.sp,
+                fontSize = 21.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontFamily = FontFamily.Serif,
-                modifier = Modifier.padding(vertical = 2.dp)
+                modifier = Modifier.padding(vertical = 1.dp)
             )
 
             // Latin text
             Text(
                 text = preset.latin,
-                fontSize = 13.sp,
+                fontSize = 12.5.sp,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.primary
@@ -616,7 +624,7 @@ private fun ActiveDzikirCard(
             // Translation
             Text(
                 text = "\"${preset.translation}\"",
-                fontSize = 11.sp,
+                fontSize = 10.5.sp,
                 fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -644,12 +652,12 @@ private fun TargetSelectorPillsRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+            .padding(horizontal = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Text(
             text = "TARGET HITUNGAN",
-            fontSize = 10.sp,
+            fontSize = 9.5.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -659,7 +667,7 @@ private fun TargetSelectorPillsRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             targets.forEach { (targetValue, label) ->
                 val isSelected = currentTarget == targetValue
@@ -727,23 +735,23 @@ private fun AnimatedTasbihInteractiveCard(
     var dragAccumulatorY by remember { mutableFloatStateOf(0f) }
 
     Card(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        border = BorderStroke(1.5.dp, DeepGoldAccent.copy(alpha = 0.4f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        border = BorderStroke(1.2.dp, DeepGoldAccent.copy(alpha = 0.4f)),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 12.dp)
             .testTag("tasbih_interactive_canvas_card")
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Bead theme indicator and lap counter
             Row(
@@ -830,8 +838,8 @@ private fun AnimatedTasbihInteractiveCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(310.dp)
-                    .clip(RoundedCornerShape(20.dp))
+                    .height(270.dp)
+                    .clip(RoundedCornerShape(18.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f))
                     .pointerInput(Unit) {
                         detectTapGestures(
@@ -995,10 +1003,10 @@ private fun AnimatedTasbihInteractiveCard(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = DeepEmeraldPrimary
                 ),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(54.dp)
+                    .height(48.dp)
                     .testTag("tasbih_count_main_button")
             ) {
                 Row(
@@ -1327,7 +1335,7 @@ private fun TasbihActionButtonsBar(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 12.dp)
     ) {
         Row(
             modifier = Modifier
@@ -1438,7 +1446,7 @@ private fun TasbihStatsCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 12.dp)
     ) {
         Column(
             modifier = Modifier

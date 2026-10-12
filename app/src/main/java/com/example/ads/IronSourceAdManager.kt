@@ -152,6 +152,11 @@ object IronSourceAdManager {
      * Click count is saved permanently across sessions via SharedPreferences.
      */
     fun recordClick(activity: Activity? = currentActivity) {
+        if (com.example.billing.BillingManager.isSubscribed.value) {
+            Log.d(TAG, "User has active monthly subscription (Ad-Free). Interstitial click counter bypassed.")
+            return
+        }
+
         val targetAct = activity ?: currentActivity
         val currentCount = getPersistedClickCount(targetAct)
         val newCount = currentCount + 1
@@ -179,6 +184,9 @@ object IronSourceAdManager {
     }
 
     fun loadInterstitial() {
+        if (com.example.billing.BillingManager.isSubscribed.value) {
+            return
+        }
         if (IronSource.isInterstitialReady()) {
             Log.d(TAG, "Interstitial is already ready, skip loadInterstitial")
             _isInterstitialReady.value = true
@@ -198,6 +206,10 @@ object IronSourceAdManager {
     }
 
     fun showInterstitialIfReady(activity: Activity? = currentActivity) {
+        if (com.example.billing.BillingManager.isSubscribed.value) {
+            Log.d(TAG, "User has active monthly subscription (Ad-Free). Skipping interstitial display.")
+            return
+        }
         val targetAct = activity ?: currentActivity
         try {
             if (IronSource.isInterstitialReady()) {
@@ -301,6 +313,12 @@ object IronSourceAdManager {
         val targetActivity = activity ?: currentActivity
         if (targetActivity == null) {
             onFinished()
+            return
+        }
+
+        if (com.example.billing.BillingManager.isSubscribed.value) {
+            Log.d(TAG, "Ad-Free monthly subscription active! Skipping rewarded video ad and navigating directly to Maps.")
+            targetActivity.runOnUiThread { onFinished() }
             return
         }
 
@@ -412,6 +430,10 @@ object IronSourceAdManager {
         onLoaded: (() -> Unit)? = null,
         onFailed: ((String) -> Unit)? = null
     ): IronSourceBannerLayout? {
+        if (com.example.billing.BillingManager.isSubscribed.value) {
+            Log.d(TAG, "Ad-Free monthly subscription active! Skipping banner creation.")
+            return null
+        }
         return try {
             val bannerLayout = IronSource.createBanner(activity, bannerSize)
             if (bannerLayout == null) {
