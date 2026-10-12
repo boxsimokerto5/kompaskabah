@@ -33,9 +33,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -229,187 +232,394 @@ fun HaditsCatalogContent(
         )
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .statusBarsPadding()
-    ) {
-        // 1. Top Header Bar (Only visible at top level)
-        if (selectedBook == null && selectedSection == null) {
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 3.dp,
-                shadowElevation = 4.dp,
-                modifier = Modifier.fillMaxWidth()
+    val pageBackgroundColor = MaterialTheme.colorScheme.background
+
+    if (selectedBook != null || selectedSection != null) {
+        val currentBook = selectedBook
+        val currentSection = selectedSection
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(pageBackgroundColor)
+                .statusBarsPadding()
+        ) {
+            when {
+                currentBook != null && currentSection != null -> {
+                    OnlineHadithDetailList(
+                        book = currentBook,
+                        section = currentSection,
+                        repository = hadithRepository,
+                        ttsHelper = ttsHelper,
+                        isPlaying = isPlaying,
+                        currentlyPlayingId = currentlyPlayingId,
+                        onBack = {
+                            ttsHelper.stop()
+                            selectedSection = null
+                        }
+                    )
+                }
+                currentBook != null -> {
+                    BookSectionsVerticalList(
+                        book = currentBook,
+                        onSelectSection = { section -> selectedSection = section },
+                        onBack = {
+                            ttsHelper.stop()
+                            selectedBook = null
+                            selectedSection = null
+                        }
+                    )
+                }
+            }
+        }
+    } else {
+        // LEVEL 1: Main Catalog Header & Tabs
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(pageBackgroundColor)
+        ) {
+            // Full-Width Atmospheric Hero Banner (Arab Oasis & Camels)
+            // Rata kiri & kanan (fillMaxWidth), menjangkau ke atas notifikasi (WindowInsets.statusBars),
+            // serta dilengkapi gradasi atas dan bawah identik dengan halaman kompas
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(260.dp)
+                    .testTag("hadits_hero_banner")
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = onBack,
-                            modifier = Modifier.testTag("btn_hadits_back")
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Kembali",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                // Background image pemandangan orang arab, unta, oasis air jernih, pohon kurma, dan langit biru cerah
+                Image(
+                    painter = painterResource(id = R.drawable.img_arab_oasis_camels_1791805370717),
+                    contentDescription = "Pemandangan Oasis Padang Pasir dengan Orang Arab dan Unta",
+                    contentScale = ContentScale.Crop,
+                    alignment = Alignment.TopCenter,
+                    modifier = Modifier.fillMaxSize()
+                )
 
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = "Katalog Hadits",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = if (currentTab == HaditsScreenTab.TEMATIK_DERAJAT) {
-                                    "Shahih, Hasan, Dha'if & Edukasi Populer"
-                                } else {
-                                    "7 Kitab Induk Hadits Terlengkap (Kutubus Sittah)"
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-
-                        // Tombol Ikon Kaca Pembesar (Pencarian Pop Up)
-                        IconButton(
-                            onClick = { showSearchDialog = true },
-                            modifier = Modifier.testTag("btn_hadits_search_icon")
-                        ) {
-                            Box {
-                                Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = "Pencarian Kitab & Hadits",
-                                    tint = if (kumpulanKitabSearchQuery.isNotBlank()) DeepGoldAccent else DeepEmeraldPrimary
+                // Gradasi atas (Scrim) untuk keterbacaan baris status/notifikasi & tombol navigasi
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(95.dp)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF062338).copy(alpha = 0.50f),
+                                    Color.Transparent
                                 )
-                                if (kumpulanKitabSearchQuery.isNotBlank()) {
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = DeepGoldAccent,
-                                        modifier = Modifier
-                                            .size(7.dp)
-                                            .align(Alignment.TopEnd)
-                                    ) {}
+                            )
+                        )
+                )
+
+                // Gradasi bawah yang menyatu lembut ke warna latar belakang halaman (seperti halaman kompas)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    pageBackgroundColor.copy(alpha = 0.72f),
+                                    pageBackgroundColor
+                                )
+                            )
+                        )
+                )
+
+                // Konten di dalam banner: Navigasi atas di bawah baris notifikasi & Deskripsi koleksi hadits
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Baris Navigasi Atas (Kembali, Judul, Pencarian, Info, Pengaturan)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f, fill = false)
+                        ) {
+                            Surface(
+                                onClick = onBack,
+                                shape = CircleShape,
+                                color = Color.White.copy(alpha = 0.88f),
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .testTag("btn_hadits_back")
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Kembali",
+                                        tint = DeepEmeraldPrimary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
+                            }
+
+                            Spacer(modifier = Modifier.width(10.dp))
+
+                            Column {
+                                Text(
+                                    text = "Katalog Hadits",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        shadow = Shadow(
+                                            color = Color.Black.copy(alpha = 0.75f),
+                                            offset = Offset(0f, 1f),
+                                            blurRadius = 3f
+                                        )
+                                    ),
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = if (currentTab == HaditsScreenTab.TEMATIK_DERAJAT) {
+                                        "Shahih, Hasan, Dha'if & Edukasi Populer"
+                                    } else {
+                                        "7 Kitab Induk Hadits (Kutubus Sittah)"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        shadow = Shadow(
+                                            color = Color.Black.copy(alpha = 0.75f),
+                                            offset = Offset(0f, 1f),
+                                            blurRadius = 2f
+                                        )
+                                    ),
+                                    color = Color.White.copy(alpha = 0.90f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
                         }
 
-                        IconButton(
-                            onClick = { showKnowledgeDialog = true },
-                            modifier = Modifier.testTag("btn_hadits_knowledge")
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "Panduan Derajat Hadits",
-                                tint = DeepEmeraldPrimary
-                            )
-                        }
+                            Surface(
+                                onClick = { showSearchDialog = true },
+                                shape = CircleShape,
+                                color = Color.White.copy(alpha = 0.88f),
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .testTag("btn_hadits_search_icon")
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = "Pencarian Kitab & Hadits",
+                                        tint = if (kumpulanKitabSearchQuery.isNotBlank()) DeepGoldAccent else DeepEmeraldPrimary,
+                                        modifier = Modifier.size(19.dp)
+                                    )
+                                    if (kumpulanKitabSearchQuery.isNotBlank()) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = DeepGoldAccent,
+                                            modifier = Modifier
+                                                .size(7.dp)
+                                                .align(Alignment.TopEnd)
+                                                .padding(2.dp)
+                                        ) {}
+                                    }
+                                }
+                            }
 
-                        IconButton(
-                            onClick = onOpenSettings,
-                            modifier = Modifier.testTag("btn_hadits_settings")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "Pengaturan",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                            Surface(
+                                onClick = { showKnowledgeDialog = true },
+                                shape = CircleShape,
+                                color = Color.White.copy(alpha = 0.88f),
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .testTag("btn_hadits_knowledge")
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = "Panduan Derajat Hadits",
+                                        tint = DeepEmeraldPrimary,
+                                        modifier = Modifier.size(19.dp)
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                onClick = onOpenSettings,
+                                shape = CircleShape,
+                                color = Color.White.copy(alpha = 0.88f),
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .testTag("btn_hadits_settings")
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Settings,
+                                        contentDescription = "Pengaturan",
+                                        tint = DeepEmeraldPrimary,
+                                        modifier = Modifier.size(19.dp)
+                                    )
+                                }
+                            }
                         }
                     }
 
-                    // Main Tab Switcher: [Tematik & Derajat] vs [Kumpulan Kitab]
-                    TabRow(
-                        selectedTabIndex = currentTab.ordinal,
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        contentColor = DeepEmeraldPrimary
+                    // Blok Informasi Bawah
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 6.dp)
                     ) {
-                        Tab(
-                            selected = currentTab == HaditsScreenTab.TEMATIK_DERAJAT,
-                            onClick = { currentTab = HaditsScreenTab.TEMATIK_DERAJAT },
-                            text = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Icon(Icons.Default.AutoStories, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Text("Tematik & Derajat", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                }
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = Color(0xFF133F2B).copy(alpha = 0.90f),
+                            border = BorderStroke(1.dp, DeepGoldAccent),
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = if (currentTab == HaditsScreenTab.TEMATIK_DERAJAT) "📜" else "☀️",
+                                    fontSize = 12.sp
+                                )
+                                Text(
+                                    text = if (currentTab == HaditsScreenTab.TEMATIK_DERAJAT) {
+                                        "Hadits Nabawi Terverifikasi"
+                                    } else {
+                                        "Kutubus Sittah & Al-Muwatta"
+                                    },
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFFFE599)
+                                )
                             }
-                        )
+                        }
 
-                        Tab(
-                            selected = currentTab == HaditsScreenTab.KUMPULAN_KITAB,
-                            onClick = { currentTab = HaditsScreenTab.KUMPULAN_KITAB },
-                            text = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Icon(Icons.Default.LibraryBooks, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Text("Kumpulan Kitab", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
+                        Text(
+                            text = if (currentTab == HaditsScreenTab.TEMATIK_DERAJAT) {
+                                "Koleksi Hadits & Sanad"
+                            } else {
+                                "Kumpulan Kitab Induk Hadits"
+                            },
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                shadow = Shadow(
+                                    color = Color.Black.copy(alpha = 0.75f),
+                                    offset = Offset(0f, 1f),
+                                    blurRadius = 3f
+                                )
+                            ),
+                            fontWeight = FontWeight.Black,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (currentTab == HaditsScreenTab.TEMATIK_DERAJAT) {
+                                "Pelajari sabda Nabi ﷺ dengan klasifikasi derajat sanad yang ilmiah, mudah difahami, dan dilengkapi faedah."
+                            } else {
+                                "Akses 7 Kitab Induk Hadits terlengkap karya Bukhari, Muslim, Abu Dawud, Tirmidzi, dll."
+                            },
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                shadow = Shadow(
+                                    color = Color.Black.copy(alpha = 0.75f),
+                                    offset = Offset(0f, 1f),
+                                    blurRadius = 2f
+                                )
+                            ),
+                            color = Color.White.copy(alpha = 0.92f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
             }
-        }
 
-        // Tab Body Content
-        when (currentTab) {
-            HaditsScreenTab.TEMATIK_DERAJAT -> {
-                TematikHaditsView(
-                    ttsHelper = ttsHelper,
-                    isPlaying = isPlaying,
-                    currentlyPlayingId = currentlyPlayingId
-                )
-            }
-            HaditsScreenTab.KUMPULAN_KITAB -> {
-                KumpulanKitabHierarchicalView(
-                    repository = hadithRepository,
-                    ttsHelper = ttsHelper,
-                    isPlaying = isPlaying,
-                    currentlyPlayingId = currentlyPlayingId,
-                    selectedBook = selectedBook,
-                    selectedSection = selectedSection,
-                    searchQuery = kumpulanKitabSearchQuery,
-                    selectedFilter = kumpulanKitabSearchFilter,
-                    onOpenSearchDialog = { showSearchDialog = true },
-                    onClearSearch = { kumpulanKitabSearchQuery = "" },
-                    onSelectBook = { book ->
-                        selectedBook = book
-                        selectedSection = null
-                    },
-                    onSelectSection = { section ->
-                        selectedSection = section
-                    },
-                    onSelectBookAndSection = { book, section ->
-                        selectedBook = book
-                        selectedSection = section
-                    },
-                    onBackToBooks = {
-                        ttsHelper.stop()
-                        selectedBook = null
-                        selectedSection = null
-                    },
-                    onBackToSections = {
-                        ttsHelper.stop()
-                        selectedSection = null
+            // Main Tab Switcher: [Tematik & Derajat] vs [Kumpulan Kitab]
+            TabRow(
+                selectedTabIndex = currentTab.ordinal,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = DeepEmeraldPrimary
+            ) {
+                Tab(
+                    selected = currentTab == HaditsScreenTab.TEMATIK_DERAJAT,
+                    onClick = { currentTab = HaditsScreenTab.TEMATIK_DERAJAT },
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(Icons.Default.AutoStories, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Text("Tematik & Derajat", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 )
+
+                Tab(
+                    selected = currentTab == HaditsScreenTab.KUMPULAN_KITAB,
+                    onClick = { currentTab = HaditsScreenTab.KUMPULAN_KITAB },
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(Icons.Default.LibraryBooks, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Text("Kumpulan Kitab", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                )
+            }
+
+            // Tab Body Content
+            when (currentTab) {
+                HaditsScreenTab.TEMATIK_DERAJAT -> {
+                    TematikHaditsView(
+                        ttsHelper = ttsHelper,
+                        isPlaying = isPlaying,
+                        currentlyPlayingId = currentlyPlayingId
+                    )
+                }
+                HaditsScreenTab.KUMPULAN_KITAB -> {
+                    KumpulanKitabHierarchicalView(
+                        repository = hadithRepository,
+                        ttsHelper = ttsHelper,
+                        isPlaying = isPlaying,
+                        currentlyPlayingId = currentlyPlayingId,
+                        selectedBook = null,
+                        selectedSection = null,
+                        searchQuery = kumpulanKitabSearchQuery,
+                        selectedFilter = kumpulanKitabSearchFilter,
+                        onOpenSearchDialog = { showSearchDialog = true },
+                        onClearSearch = { kumpulanKitabSearchQuery = "" },
+                        onSelectBook = { book ->
+                            selectedBook = book
+                            selectedSection = null
+                        },
+                        onSelectSection = { section ->
+                            selectedSection = section
+                        },
+                        onSelectBookAndSection = { book, section ->
+                            selectedBook = book
+                            selectedSection = section
+                        },
+                        onBackToBooks = {
+                            ttsHelper.stop()
+                            selectedBook = null
+                            selectedSection = null
+                        },
+                        onBackToSections = {
+                            ttsHelper.stop()
+                            selectedSection = null
+                        }
+                    )
+                }
             }
         }
     }
@@ -1014,80 +1224,6 @@ private fun BooksBannerVerticalList(
                         )
                     }
                 } else {
-                    // Hero Intro Header dengan Foto Cerah Ka'bah Makkah
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(150.dp)
-                                .padding(horizontal = 14.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .testTag("kumpulan_kitab_hero_banner")
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.img_makkah_bright_daylight_1791802483315),
-                                contentDescription = "Pemandangan Cerah Ka'bah Makkah",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            0.0f to Color(0x05000000),
-                                            0.35f to Color(0x28000000),
-                                            1.0f to Color(0xBF061810)
-                                        )
-                                    )
-                            )
-
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(14.dp),
-                                verticalArrangement = Arrangement.Bottom
-                            ) {
-                                Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = Color(0xCC000000),
-                                    border = BorderStroke(0.8.dp, DeepGoldAccent),
-                                    modifier = Modifier.padding(bottom = 4.dp)
-                                ) {
-                                    Text(
-                                        text = "☀️ Kutubus Sittah & Al-Muwatta",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFFFE89C),
-                                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
-                                    )
-                                }
-
-                                Text(
-                                    text = "Kumpulan Kitab Hadits",
-                                    style = MaterialTheme.typography.titleLarge.copy(
-                                        shadow = Shadow(
-                                            color = Color.Black.copy(alpha = 0.8f),
-                                            offset = Offset(0f, 1f),
-                                            blurRadius = 3f
-                                        )
-                                    ),
-                                    fontWeight = FontWeight.Black,
-                                    color = Color.White
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "Kitab induk hadits otentik para imam besar. Sentuh ikon kaca pembesar di atas untuk mencari bab spesifik secara praktis.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.95f),
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                    }
-
                     // Judul Bagian Kitab Induk
                     item {
                         Row(
@@ -2404,83 +2540,9 @@ private fun TematikHaditsView(
         modifier = Modifier
             .fillMaxSize()
             .testTag("hadits_catalog_list"),
-        contentPadding = PaddingValues(top = 10.dp, bottom = 95.dp),
+        contentPadding = PaddingValues(top = 12.dp, bottom = 95.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Hero Visual Card
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(160.dp)
-                    .padding(horizontal = 16.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .testTag("hadits_hero_banner")
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.img_quran_yasin_rehal_1791679991654),
-                    contentDescription = "Katalog Hadits Rasulullah SAW",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                0.0f to Color(0x66082015),
-                                0.55f to Color(0xB20E3022),
-                                1.0f to MaterialTheme.colorScheme.background
-                            )
-                        )
-                )
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 18.dp, vertical = 14.dp),
-                    verticalArrangement = Arrangement.Bottom
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = Color(0xFF133F2B),
-                        border = BorderStroke(1.dp, DeepGoldAccent),
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(text = "📜", fontSize = 12.sp)
-                            Text(
-                                text = "Hadits Nabawi Terverifikasi",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFFFE599)
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = "Koleksi Hadits & Sanad",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Pelajari sabda Nabi ﷺ dengan klasifikasi derajat sanad yang ilmiah, mudah difahami, dan dilengkapi klarifikasi edukatif.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.90f),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
-
         // Search Bar & Filters
         item {
             Column(

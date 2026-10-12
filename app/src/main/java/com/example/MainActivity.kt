@@ -21,6 +21,7 @@ import com.example.ui.QiblaNavigationTab
 import com.example.ui.QiblaViewModel
 import com.example.ui.components.LanguageSelectionDialog
 import com.example.ui.theme.MyApplicationTheme
+import java.io.File
 import com.example.ads.IronSourceAdManager
 import com.example.billing.BillingManager
 import com.example.update.GooglePlayUpdateManager
@@ -33,6 +34,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ensureWebViewCacheDirs()
         enableEdgeToEdge()
         handleWidgetDeepLinkIntent(intent)
 
@@ -171,6 +173,16 @@ class MainActivity : ComponentActivity() {
             QiblaPrayerWidgetProvider.TAB_COMPASS -> {
                 qiblaViewModel.selectTab(QiblaNavigationTab.COMPASS)
             }
+        }
+    }
+
+    private fun ensureWebViewCacheDirs() {
+        try {
+            val codeCacheDir = File(cacheDir, "WebView/Default/HTTP Cache/Code Cache")
+            File(codeCacheDir, "js").mkdirs()
+            File(codeCacheDir, "wasm").mkdirs()
+        } catch (_: Exception) {
+            // Ignore any cache directory initialization errors
         }
     }
 }
