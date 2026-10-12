@@ -30,13 +30,17 @@ data class HadithBook(
     val gradeStatus: String,
     val badgeColorHex: Long,
     val description: String,
+    val imageRes: Int = 0,
     val sections: List<HadithBookSection>
 )
 
 data class HadithBookSection(
     val sectionNumber: Int,
     val titleId: String,
-    val titleEn: String
+    val titleEn: String,
+    val hadithRange: String = "",
+    val description: String = "",
+    val keyTopics: List<String> = emptyList()
 )
 
 data class HadithParsedItem(
