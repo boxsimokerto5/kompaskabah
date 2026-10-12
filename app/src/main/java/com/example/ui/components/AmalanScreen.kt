@@ -155,6 +155,19 @@ fun AmalanScreen(
                 onOpenSettings = onOpenSettings,
                 onOpenTasbih = onOpenTasbih
             )
+        } else if (selectedCategory == AmalanCategory.KATALOG_HADITS) {
+            // Tampilan Khusus Katalog Hadits Lengkap dengan Filter Derajat & Tema
+            HaditsCatalogContent(
+                ttsHelper = ttsHelper,
+                isPlaying = isPlaying,
+                currentlyPlayingId = currentlyPlayingId,
+                onBack = {
+                    IronSourceAdManager.recordClick(context)
+                    ttsHelper.stop()
+                    selectedCategory = null
+                },
+                onOpenSettings = onOpenSettings
+            )
         } else {
             // Tampilan Detail Sub-Screen
             AmalanDetailSubScreen(
@@ -521,6 +534,19 @@ private fun getAmalanBannerTheme(category: AmalanCategory): AmalanBannerTheme {
             ctaGradient = listOf(Color(0xFFFF80AB), Color(0xFFFF4081)),
             ctaTextColor = Color(0xFF4A0020),
             watermarkEmblem = "✨"
+        )
+        AmalanCategory.KATALOG_HADITS -> AmalanBannerTheme(
+            imageRes = R.drawable.img_quran_yasin_rehal_1791679991654,
+            bgGradient = listOf(Color(0xFF0D3220), Color(0xFF145334), Color(0xFF1F7D4E)),
+            tagIcon = "📜",
+            tagLabel = "Koleksi Hadits & Sanad",
+            subHeadline = "Shahih, Hasan, Dha'if & Edukasi Populer",
+            mainHeadline = "KATALOG HADITS",
+            featureHighlight = "Klasifikasi Ilmiah, Terjemah & Syarah",
+            ctaLabel = "Buka Hadits",
+            ctaGradient = listOf(Color(0xFF81C784), Color(0xFF4CAF50)),
+            ctaTextColor = Color(0xFF032607),
+            watermarkEmblem = "📜"
         )
     }
 }
@@ -1393,6 +1419,10 @@ private fun AmalanDetailSubScreen(
                             onCopy = { copyToClipboard(sholawat.title, "${sholawat.arabicText}\n${sholawat.latinText}\n${sholawat.translation}") }
                         )
                     }
+                }
+
+                AmalanCategory.KATALOG_HADITS -> {
+                    // Handled directly via HaditsCatalogContent in parent AmalanScreen
                 }
             }
         }

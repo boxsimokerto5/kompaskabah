@@ -7,6 +7,7 @@
     <string name="tab_calendar">التقويم</string>
     <string name="tab_tasbih">تسبيح</string>
     <string name="tab_amalan">الأعمال والأذكار</string>
+    <string name="tab_hadits">الحديث</string>
     <string name="tab_mosques">المساجد</string>
     <string name="tab_sensor">المعايرة</string>
     <string name="qibla_aligned">مواجه للقبلة بدقة</string>

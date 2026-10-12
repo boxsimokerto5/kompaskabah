@@ -56,6 +56,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Adjust
+import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CompassCalibration
@@ -121,6 +122,7 @@ import com.example.domain.tasbih.TasbihBeadTheme
 import com.example.service.AdhanPlaybackState
 import com.example.ui.components.AmalanScreen
 import com.example.ui.components.DigitalTasbihScreen
+import com.example.ui.components.HaditsCatalogScreen
 import com.example.ui.components.IslamicCalendarScreen
 import com.example.ui.components.MonthlySubscriptionDialog
 import com.example.ui.components.PermissionDeclarationSheet
@@ -417,6 +419,13 @@ fun QiblaMainScreen(
                                 onNavigateBackToCompass = { onSelectTab(QiblaNavigationTab.COMPASS) },
                                 onOpenSettings = { showSettingsScreen = true },
                                 onOpenTasbih = { onSelectTab(QiblaNavigationTab.TASBIH) }
+                            )
+                        }
+
+                        QiblaNavigationTab.HADITS -> {
+                            HaditsCatalogScreen(
+                                onNavigateBack = { onSelectTab(QiblaNavigationTab.COMPASS) },
+                                onOpenSettings = { showSettingsScreen = true }
                             )
                         }
 
@@ -1399,6 +1408,14 @@ private fun ElegantQiblaBottomMenuBar(
                 )
 
                 CircularNavMenuItem(
+                    label = stringResource(id = R.string.tab_hadits),
+                    icon = Icons.Default.AutoStories,
+                    isSelected = selectedTab == QiblaNavigationTab.HADITS,
+                    onClick = { onSelectTab(QiblaNavigationTab.HADITS) },
+                    testTag = "nav_tab_hadits"
+                )
+
+                CircularNavMenuItem(
                     label = stringResource(id = R.string.tab_mosques),
                     icon = Icons.Default.Mosque,
                     isSelected = selectedTab == QiblaNavigationTab.NEARBY_MOSQUES,
@@ -1545,6 +1562,14 @@ private fun QiblaSideNavigationRail(
             icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null) },
             label = { Text(stringResource(id = R.string.tab_amalan)) },
             modifier = Modifier.testTag("rail_tab_amalan")
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        NavigationRailItem(
+            selected = selectedTab == QiblaNavigationTab.HADITS,
+            onClick = { onSelectTab(QiblaNavigationTab.HADITS) },
+            icon = { Icon(Icons.Default.AutoStories, contentDescription = null) },
+            label = { Text(stringResource(id = R.string.tab_hadits)) },
+            modifier = Modifier.testTag("rail_tab_hadits")
         )
         Spacer(modifier = Modifier.height(12.dp))
         NavigationRailItem(

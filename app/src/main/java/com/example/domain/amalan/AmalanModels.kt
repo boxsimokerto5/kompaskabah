@@ -55,6 +55,13 @@ enum class AmalanCategory(
         badge = "8 Sholawat",
         description = "Sholawat Ibrahimiyah, Nariyah, Tibbil Qulub, Munjiyat, Fatih, Badar, Asyghil & Jibril.",
         ornamentSymbol = "✨"
+    ),
+    KATALOG_HADITS(
+        title = "Katalog Hadits",
+        subtitle = "Shahih, Hasan, Dha'if & Edukasi Populer",
+        badge = "20 Hadits",
+        description = "Kumpulan hadits tematik lengkap dengan klasifikasi derajat sanad, perawi, arti, dan syarah ringkas.",
+        ornamentSymbol = "📜"
     )
 }
 

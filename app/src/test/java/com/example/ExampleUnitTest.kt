@@ -67,4 +67,90 @@ class ExampleUnitTest {
         assertTrue(todayCell != null)
         assertEquals(11, todayCell?.gregorianDay)
     }
+
+    @Test
+    fun haditsCatalog_containsClassifiedHaditsWithAllGradesAndClarifications() {
+        val items = com.example.domain.hadits.HaditsData.items
+        assertTrue("Hadits catalog should have at least 20 items", items.size >= 20)
+
+        val grades = items.map { it.grade }.toSet()
+        assertTrue(grades.contains(com.example.domain.hadits.HaditsGrade.SHAHIH))
+        assertTrue(grades.contains(com.example.domain.hadits.HaditsGrade.HASAN))
+        assertTrue(grades.contains(com.example.domain.hadits.HaditsGrade.DHAIF))
+        assertTrue(grades.contains(com.example.domain.hadits.HaditsGrade.POPULER_KLARIFIKASI))
+
+        items.forEach { hadits ->
+            assertTrue(hadits.title.isNotBlank())
+            assertTrue(hadits.arabic.isNotBlank())
+            assertTrue(hadits.latin.isNotBlank())
+            assertTrue(hadits.translation.isNotBlank())
+            assertTrue(hadits.narrator.isNotBlank())
+            assertTrue(hadits.faedah.isNotBlank())
+        }
+
+        val dhaifItems = items.filter { it.grade == com.example.domain.hadits.HaditsGrade.DHAIF }
+        assertTrue(dhaifItems.isNotEmpty())
+        dhaifItems.forEach {
+            assertTrue("Dha'if hadits should provide clarification or authentic replacement", it.clarification != null)
+        }
+    }
+
+    @Test
+    fun hadithRepository_getAvailableBooks_returnsCanonicalCollections() {
+        val repo = com.example.data.network.hadith.HadithRepositoryImpl()
+        val books = repo.getAvailableBooks()
+        assertTrue("Should have canonical books", books.size >= 7)
+
+        val bukhari = books.find { it.id == "bukhari" }
+        assertTrue(bukhari != null)
+        assertEquals("Shahih Al-Bukhari", bukhari?.title)
+        assertTrue(bukhari!!.sections.isNotEmpty())
+
+        val muslim = books.find { it.id == "muslim" }
+        assertTrue(muslim != null)
+        assertEquals("Shahih Muslim", muslim?.title)
+    }
+
+    @Test
+    fun hadithRepository_fetchSectionHadiths_parsesAndPairsArabicAndIndonesian() = kotlinx.coroutines.test.runTest {
+        val fakeApiService = object : com.example.data.network.hadith.HadithApiService {
+            override suspend fun getArabicSection(book: String, section: Int): com.example.data.network.hadith.HadithSectionResponse {
+                return com.example.data.network.hadith.HadithSectionResponse(
+                    metadata = com.example.data.network.hadith.HadithMetadataResponse(name = "Test Book"),
+                    hadiths = listOf(
+                        com.example.data.network.hadith.HadithRawItem(hadithnumber = 1, text = "إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ"),
+                        com.example.data.network.hadith.HadithRawItem(hadithnumber = 2, text = "بُنِيَ الإِسْلاَمُ عَلَى خَمْسٍ")
+                    )
+                )
+            }
+
+            override suspend fun getIndonesianSection(book: String, section: Int): com.example.data.network.hadith.HadithSectionResponse {
+                return com.example.data.network.hadith.HadithSectionResponse(
+                    metadata = com.example.data.network.hadith.HadithMetadataResponse(name = "Test Book"),
+                    hadiths = listOf(
+                        com.example.data.network.hadith.HadithRawItem(hadithnumber = 1, text = "Sesungguhnya setiap amalan bergantung pada niatnya."),
+                        com.example.data.network.hadith.HadithRawItem(hadithnumber = 2, text = "Islam dibangun di atas lima perkara.")
+                    )
+                )
+            }
+        }
+
+        val repository = com.example.data.network.hadith.HadithRepositoryImpl(fakeApiService)
+        val result = repository.fetchSectionHadiths("bukhari", 1)
+
+        assertTrue(result.isSuccess)
+        val items = result.getOrThrow()
+        assertEquals(2, items.size)
+
+        val first = items[0]
+        assertEquals(1, first.number)
+        assertEquals("إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ", first.arabicText)
+        assertEquals("Sesungguhnya setiap amalan bergantung pada niatnya.", first.indonesianText)
+        assertEquals("Shahih Al-Bukhari", first.bookName)
+
+        val second = items[1]
+        assertEquals(2, second.number)
+        assertEquals("بُنِيَ الإِسْلاَمُ عَلَى خَمْسٍ", second.arabicText)
+        assertEquals("Islam dibangun di atas lima perkara.", second.indonesianText)
+    }
 }

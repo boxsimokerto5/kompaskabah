@@ -7,6 +7,7 @@
     <string name="tab_calendar">Calendar</string>
     <string name="tab_tasbih">Tasbeeh</string>
     <string name="tab_amalan">Deeds &amp; Dhikr</string>
+    <string name="tab_hadits">Hadith</string>
     <string name="tab_mosques">Mosques</string>
     <string name="tab_sensor">Calibration</string>
     <string name="qibla_aligned">EXACTLY FACING QIBLA</string>

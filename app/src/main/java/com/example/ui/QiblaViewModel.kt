@@ -43,6 +43,7 @@ enum class QiblaNavigationTab {
     ISLAMIC_CALENDAR,
     TASBIH,
     AMALAN,
+    HADITS,
     NEARBY_MOSQUES,
     SENSOR_DIAGNOSTICS
 }
