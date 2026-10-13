@@ -39,7 +39,8 @@ android {
       }
 
       storeFile = targetKeyFile
-      if (targetKeyFile == rootUploadKey || (customFile != null && targetKeyFile == customFile)) {
+      val isDebugKey = targetKeyFile.name == "debug.keystore"
+      if (!isDebugKey && (targetKeyFile == rootUploadKey || (customFile != null && targetKeyFile == customFile))) {
         storePassword = System.getenv("STORE_PASSWORD") ?: "kompaskiblat2026"
         keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
         keyPassword = System.getenv("KEY_PASSWORD") ?: "kompaskiblat2026"

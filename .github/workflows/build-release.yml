@@ -92,6 +92,10 @@ jobs:
             STORE_PASS="android"
             KEY_PASS="android"
             KEY_ALIAS="androiddebugkey"
+            echo "KEYSTORE_PATH=$KEYSTORE_FILE" >> "$GITHUB_ENV"
+            echo "STORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
             echo "KEYSTORE_FILE_PATH=$KEYSTORE_FILE" >> "$GITHUB_ENV"
           else
             echo "Menggunakan debug.keystore yang sudah ada di repositori..."
@@ -99,6 +103,10 @@ jobs:
             STORE_PASS="android"
             KEY_PASS="android"
             KEY_ALIAS="androiddebugkey"
+            echo "KEYSTORE_PATH=$KEYSTORE_FILE" >> "$GITHUB_ENV"
+            echo "STORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
             echo "KEYSTORE_FILE_PATH=$KEYSTORE_FILE" >> "$GITHUB_ENV"
           fi
 
@@ -106,6 +114,8 @@ jobs:
           keytool -list -v -keystore "$KEYSTORE_FILE" -storepass "$STORE_PASS" -alias "$KEY_ALIAS" | grep -E "SHA1:|SHA256:" || true
 
       - name: "6. Build Release AAB & APK (Optimized Memory & Stacktrace)"
+        env:
+          GRADLE_OPTS: "-Xmx3g -XX:MaxMetaspaceSize=1g -XX:+UseG1GC"
         run: |
           echo "=== 6.1 Membangun AAB (Android App Bundle untuk Google Play) ==="
           ./gradlew bundleRelease --stacktrace --no-daemon
