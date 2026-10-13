@@ -1,6 +1,6 @@
 {
-  "name": "Kompas Kiblat",
-  "description": "Aplikasi penunjuk arah Kiblat (Ka'bah) akurasi tinggi secara real-time menggunakan sensor magnetometer, giroskop, dan koordinat GPS dengan visualisasi kompas dinamis serta jadwal waktu sholat.",
+  "name": "Kitab Hadits Pro",
+  "description": "Aplikasi Kitab Hadits Shahih lengkap, penunjuk arah Kiblat Ka'bah akurasi tinggi secara real-time, jadwal waktu sholat akurat, dan panduan ibadah harian.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

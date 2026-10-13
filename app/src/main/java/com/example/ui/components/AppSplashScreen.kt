@@ -241,7 +241,7 @@ fun AppSplashScreen(
 
             // Judul Aplikasi
             Text(
-                text = "KOMPAS KIBLAT",
+                text = "KITAB HADITS PRO",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     shadow = Shadow(
                         color = Color.Black.copy(alpha = 0.85f),
@@ -299,7 +299,7 @@ fun AppSplashScreen(
             )
 
             Text(
-                text = "Versi 1.1",
+                text = "Versi 1.0",
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.White.copy(alpha = 0.55f),
                 fontSize = 10.sp

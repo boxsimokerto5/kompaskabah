@@ -25,6 +25,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Kompas Kiblat"
+rootProject.name = "Kitab Hadits Pro"
 
 include(":app")

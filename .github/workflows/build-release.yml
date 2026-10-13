@@ -1,4 +1,4 @@
-name: Build Release APK & AAB (Google Play Ready)
+name: Build Release APK & AAB - Kitab Hadits Pro
 
 on:
   push:
@@ -52,7 +52,7 @@ jobs:
       - name: "4. Beri Izin Eksekusi Gradle Wrapper"
         run: chmod +x gradlew
 
-      - name: "5. Siapkan Keystore Tanda Tangan Rilis"
+      - name: "5. Siapkan Keystore Tanda Tangan Rilis Permanen"
         id: setup_keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
@@ -60,35 +60,54 @@ jobs:
           KEY_PASS_SECRET: ${{ secrets.KEY_PASSWORD }}
           KEY_ALIAS_SECRET: ${{ secrets.KEY_ALIAS }}
         run: |
-          KEYSTORE_FILE="${{ github.workspace }}/my-upload-key.jks"
-          STORE_PASS="${STORE_PASS_SECRET:-kompaskiblat2026}"
-          KEY_PASS="${KEY_PASS_SECRET:-kompaskiblat2026}"
-          KEY_ALIAS="${KEY_ALIAS_SECRET:-upload}"
-
-          echo "KEYSTORE_PATH=$KEYSTORE_FILE" >> "$GITHUB_ENV"
-          echo "STORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
-          echo "KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
-          echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
-
+          # Prioritas 1: Gunakan Secret jika diatur di GitHub Secrets
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "Menggunakan Release Keystore dari GitHub Secrets..."
+            KEYSTORE_FILE="${{ github.workspace }}/my-upload-key.jks"
+            STORE_PASS="${STORE_PASS_SECRET:-android}"
+            KEY_PASS="${KEY_PASS_SECRET:-android}"
+            KEY_ALIAS="${KEY_ALIAS_SECRET:-androiddebugkey}"
             echo "$KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_FILE"
+            echo "KEYSTORE_PATH=$KEYSTORE_FILE" >> "$GITHUB_ENV"
+            echo "STORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          # Prioritas 2: Gunakan berkas my-upload-key.jks jika ada
           elif [ -f "my-upload-key.jks" ]; then
-            echo "Menggunakan file my-upload-key.jks yang sudah ada..."
+            echo "Menggunakan berkas my-upload-key.jks..."
+            KEYSTORE_FILE="${{ github.workspace }}/my-upload-key.jks"
+            STORE_PASS="${STORE_PASS_SECRET:-android}"
+            KEY_PASS="${KEY_PASS_SECRET:-android}"
+            KEY_ALIAS="${KEY_ALIAS_SECRET:-upload}"
+            echo "KEYSTORE_PATH=$KEYSTORE_FILE" >> "$GITHUB_ENV"
+            echo "STORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          # Prioritas 3: Gunakan debug.keystore.base64 bawaan proyek (Permanen & Konsisten)
+          elif [ -f "debug.keystore.base64" ]; then
+            echo "Memulihkan debug.keystore resmi dari debug.keystore.base64 (Sidik Jari Permanen)..."
+            base64 -d debug.keystore.base64 > "${{ github.workspace }}/debug.keystore"
+            KEYSTORE_FILE="${{ github.workspace }}/debug.keystore"
+            STORE_PASS="android"
+            KEY_PASS="android"
+            KEY_ALIAS="androiddebugkey"
+            echo "KEYSTORE_PATH=$KEYSTORE_FILE" >> "$GITHUB_ENV"
+            echo "STORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
           else
-            echo "Membuat Keystore Tanda Tangan Rilis Otomatis dengan keytool..."
-            keytool -genkeypair -v \
-              -keystore "$KEYSTORE_FILE" \
-              -alias "$KEY_ALIAS" \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -storepass "$STORE_PASS" \
-              -keypass "$KEY_PASS" \
-              -dname "CN=Kompas Kiblat, OU=Android, O=Kompas Kiblat, L=Jakarta, ST=DKI Jakarta, C=ID"
+            echo "Menggunakan debug.keystore yang sudah ada di repositori..."
+            KEYSTORE_FILE="${{ github.workspace }}/debug.keystore"
+            STORE_PASS="android"
+            KEY_PASS="android"
+            KEY_ALIAS="androiddebugkey"
+            echo "KEYSTORE_PATH=$KEYSTORE_FILE" >> "$GITHUB_ENV"
+            echo "STORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
           fi
 
-          echo "Informasi Sidik Jari Keystore:"
+          echo "Informasi Sidik Jari Keystore yang Digunakan:"
           keytool -list -v -keystore "$KEYSTORE_FILE" -storepass "$STORE_PASS" -alias "$KEY_ALIAS" | grep -E "SHA1:|SHA256:" || true
 
       - name: "6. Build Release APK & AAB (Bundle & Installable APK)"
@@ -97,10 +116,13 @@ jobs:
       - name: "7. Siapkan Folder Artefak Rilis"
         run: |
           mkdir -p release-artifacts
-          cp app/build/outputs/apk/release/*.apk release-artifacts/KompasKiblat-Release.apk 2>/dev/null || cp app/build/outputs/apk/release/*.apk release-artifacts/
-          cp app/build/outputs/bundle/release/*.aab release-artifacts/KompasKiblat-Release.aab 2>/dev/null || cp app/build/outputs/bundle/release/*.aab release-artifacts/
+          cp app/build/outputs/apk/release/*.apk release-artifacts/KitabHaditsPro-Release.apk 2>/dev/null || cp app/build/outputs/apk/release/*.apk release-artifacts/
+          cp app/build/outputs/bundle/release/*.aab release-artifacts/KitabHaditsPro-Release.aab 2>/dev/null || cp app/build/outputs/bundle/release/*.aab release-artifacts/
           if [ -f "$KEYSTORE_PATH" ]; then
-            cp "$KEYSTORE_PATH" release-artifacts/my-upload-key.jks
+            cp "$KEYSTORE_PATH" release-artifacts/permanent-release.keystore
+          fi
+          if [ -f "upload_certificate.pem" ]; then
+            cp upload_certificate.pem release-artifacts/upload_certificate.pem
           fi
           echo "=== Berkas Artefak yang Siap Diunggah ==="
           ls -lh release-artifacts/
@@ -108,7 +130,7 @@ jobs:
       - name: "8. Upload Artifact: Paket Rilis Lengkap (APK + AAB + Keystore)"
         uses: actions/upload-artifact@v4
         with:
-          name: Kompas-Kiblat-Release-Package
+          name: Kitab-Hadits-Pro-Release-Package
           path: release-artifacts/*
           if-no-files-found: error
           retention-days: 60

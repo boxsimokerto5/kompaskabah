@@ -31,7 +31,7 @@ class ExampleRobolectricTest {
     fun `read string from context in Indonesian`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val appName = context.getString(R.string.app_name)
-        assertEquals("Kompas Kiblat", appName)
+        assertEquals("Kitab Hadits Pro", appName)
     }
 
     @Test
