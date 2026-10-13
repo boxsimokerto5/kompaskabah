@@ -9,9 +9,18 @@ import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -19,6 +28,7 @@ import com.example.data.AppLanguageManager
 import com.example.ui.QiblaMainScreen
 import com.example.ui.QiblaNavigationTab
 import com.example.ui.QiblaViewModel
+import com.example.ui.components.AppSplashScreen
 import com.example.ui.components.LanguageSelectionDialog
 import com.example.ui.theme.MyApplicationTheme
 import java.io.File
@@ -60,6 +70,8 @@ class MainActivity : ComponentActivity() {
                 config
             }
 
+            var showSplash by remember { mutableStateOf(true) }
+
             CompositionLocalProvider(
                 LocalContext provides localizedContext,
                 LocalConfiguration provides localizedConfiguration,
@@ -67,75 +79,88 @@ class MainActivity : ComponentActivity() {
                 LocalOnBackPressedDispatcherOwner provides this
             ) {
                 MyApplicationTheme(darkTheme = uiState.darkThemeEnabled) {
-                    if (!uiState.isLanguageOnboardingCompleted) {
-                        LanguageSelectionDialog(
-                            currentLanguageCode = uiState.appLanguageCode,
-                            isOnboarding = true,
-                            onDismiss = {},
-                            onLanguageSelected = { chosenLang ->
-                                qiblaViewModel.completeLanguageOnboarding(chosenLang)
-                            }
-                        )
-                    }
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        if (!uiState.isLanguageOnboardingCompleted && !showSplash) {
+                            LanguageSelectionDialog(
+                                currentLanguageCode = uiState.appLanguageCode,
+                                isOnboarding = true,
+                                onDismiss = {},
+                                onLanguageSelected = { chosenLang ->
+                                    qiblaViewModel.completeLanguageOnboarding(chosenLang)
+                                }
+                            )
+                        }
 
-                    QiblaMainScreen(
-                        uiState = uiState,
-                        onSelectTab = { tab ->
-                            IronSourceAdManager.recordClick(this)
-                            qiblaViewModel.selectTab(tab)
-                        },
-                        onPermissionResult = qiblaViewModel::onPermissionResult,
-                        onRefreshGps = {
-                            IronSourceAdManager.recordClick(this)
-                            qiblaViewModel.refreshLiveGpsLocation()
-                        },
-                        onManualRotate = qiblaViewModel::setManualHeadingAngle,
-                        onSnapToQibla = {
-                            IronSourceAdManager.recordClick(this)
-                            qiblaViewModel.snapToQiblaForPreview()
-                        },
-                        onResumeSensor = {
-                            IronSourceAdManager.recordClick(this)
-                            qiblaViewModel.resumeLiveSensorTracking()
-                        },
-                        onToggleTrueNorth = qiblaViewModel::toggleTrueNorthCorrection,
-                        onToggleHaptic = {
-                            IronSourceAdManager.recordClick(this)
-                            qiblaViewModel.toggleHapticFeedback(it)
-                        },
-                        onToggleDarkTheme = qiblaViewModel::toggleDarkTheme,
-                        onToggleAdhanAuto = {
-                            IronSourceAdManager.recordClick(this)
-                            qiblaViewModel.toggleAdhanAutoEnabled(it)
-                        },
-                        onSelectMuezzin = {
-                            IronSourceAdManager.recordClick(this)
-                            qiblaViewModel.selectMuezzin(it)
-                        },
-                        onTogglePrayerAdhan = {
-                            IronSourceAdManager.recordClick(this)
-                            qiblaViewModel.togglePrayerAdhanAlarm(it)
-                        },
-                        onTestOrStopAdhan = {
-                            IronSourceAdManager.recordClick(this)
-                            qiblaViewModel.testOrStopAdhanPlayback(it)
-                        },
-                        onStopAdhan = qiblaViewModel::stopAdhanPlayback,
-                        onRefreshMosques = {
-                            IronSourceAdManager.recordClick(this)
-                            qiblaViewModel.refreshNearbyMosques(force = true)
-                        },
-                        onSelectLanguage = { chosenLang ->
-                            qiblaViewModel.selectLanguage(chosenLang)
-                        },
-                        onIncrementTasbih = qiblaViewModel::incrementTasbih,
-                        onResetTasbih = qiblaViewModel::resetTasbih,
-                        onSetTasbihTarget = qiblaViewModel::setTasbihTarget,
-                        onSelectTasbihDzikir = qiblaViewModel::selectTasbihDzikir,
-                        onSelectTasbihBeadTheme = qiblaViewModel::setTasbihBeadTheme,
-                        onToggleTasbihSound = qiblaViewModel::toggleTasbihSound,
-                        onToggleTasbihVibration = qiblaViewModel::toggleTasbihVibration
-                    )
+                        QiblaMainScreen(
+                            uiState = uiState,
+                            onSelectTab = { tab ->
+                                IronSourceAdManager.recordClick(this@MainActivity)
+                                qiblaViewModel.selectTab(tab)
+                            },
+                            onPermissionResult = qiblaViewModel::onPermissionResult,
+                            onRefreshGps = {
+                                IronSourceAdManager.recordClick(this@MainActivity)
+                                qiblaViewModel.refreshLiveGpsLocation()
+                            },
+                            onManualRotate = qiblaViewModel::setManualHeadingAngle,
+                            onSnapToQibla = {
+                                IronSourceAdManager.recordClick(this@MainActivity)
+                                qiblaViewModel.snapToQiblaForPreview()
+                            },
+                            onResumeSensor = {
+                                IronSourceAdManager.recordClick(this@MainActivity)
+                                qiblaViewModel.resumeLiveSensorTracking()
+                            },
+                            onToggleTrueNorth = qiblaViewModel::toggleTrueNorthCorrection,
+                            onToggleHaptic = {
+                                IronSourceAdManager.recordClick(this@MainActivity)
+                                qiblaViewModel.toggleHapticFeedback(it)
+                            },
+                            onToggleDarkTheme = qiblaViewModel::toggleDarkTheme,
+                            onToggleAdhanAuto = {
+                                IronSourceAdManager.recordClick(this@MainActivity)
+                                qiblaViewModel.toggleAdhanAutoEnabled(it)
+                            },
+                            onSelectMuezzin = {
+                                IronSourceAdManager.recordClick(this@MainActivity)
+                                qiblaViewModel.selectMuezzin(it)
+                            },
+                            onTogglePrayerAdhan = {
+                                IronSourceAdManager.recordClick(this@MainActivity)
+                                qiblaViewModel.togglePrayerAdhanAlarm(it)
+                            },
+                            onTestOrStopAdhan = {
+                                IronSourceAdManager.recordClick(this@MainActivity)
+                                qiblaViewModel.testOrStopAdhanPlayback(it)
+                            },
+                            onStopAdhan = qiblaViewModel::stopAdhanPlayback,
+                            onRefreshMosques = {
+                                IronSourceAdManager.recordClick(this@MainActivity)
+                                qiblaViewModel.refreshNearbyMosques(force = true)
+                            },
+                            onSelectLanguage = { chosenLang ->
+                                qiblaViewModel.selectLanguage(chosenLang)
+                            },
+                            onIncrementTasbih = qiblaViewModel::incrementTasbih,
+                            onResetTasbih = qiblaViewModel::resetTasbih,
+                            onSetTasbihTarget = qiblaViewModel::setTasbihTarget,
+                            onSelectTasbihDzikir = qiblaViewModel::selectTasbihDzikir,
+                            onSelectTasbihBeadTheme = qiblaViewModel::setTasbihBeadTheme,
+                            onToggleTasbihSound = qiblaViewModel::toggleTasbihSound,
+                            onToggleTasbihVibration = qiblaViewModel::toggleTasbihVibration
+                        )
+
+                        // Layar Splash Penuh dengan Pemandangan Oasis, Saudagar, Unta, dan Logo Ka'bah
+                        AnimatedVisibility(
+                            visible = showSplash,
+                            enter = fadeIn(),
+                            exit = fadeOut(animationSpec = tween(450))
+                        ) {
+                            AppSplashScreen(
+                                onSplashFinished = { showSplash = false }
+                            )
+                        }
+                    }
                 }
             }
         }
