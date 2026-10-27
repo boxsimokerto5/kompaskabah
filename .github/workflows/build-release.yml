@@ -115,15 +115,15 @@ jobs:
 
       - name: "6. Build Release AAB (Android App Bundle)"
         env:
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx3072m -Dorg.gradle.parallel=false -Dorg.gradle.workers.max=2 -Dfile.encoding=UTF-8"
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dorg.gradle.parallel=false -Dorg.gradle.workers.max=2 -Dfile.encoding=UTF-8"
         run: |
-          ./gradlew bundleRelease --no-daemon --stacktrace
+          ./gradlew bundleRelease --no-daemon --no-configuration-cache --stacktrace
 
       - name: "7. Build Release APK (Direct Installable APK)"
         env:
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx3072m -Dorg.gradle.parallel=false -Dorg.gradle.workers.max=2 -Dfile.encoding=UTF-8"
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dorg.gradle.parallel=false -Dorg.gradle.workers.max=2 -Dfile.encoding=UTF-8"
         run: |
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew assembleRelease --no-daemon --no-configuration-cache --stacktrace
 
       - name: "8. Siapkan Folder Artefak Rilis"
         run: |
